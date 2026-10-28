@@ -132,23 +132,23 @@ body{
 .btn-primary:hover{filter:brightness(1.08)}
 .tabs{display:none}
 @media (max-width:900px){
-  body{overflow:auto}
+  body{overflow:auto;display:flex;flex-direction:column;min-height:100vh;min-height:100dvh}
   .chrome{
-    position:sticky;top:0;z-index:20;
+    position:sticky;top:0;z-index:20;flex-shrink:0;
     background:rgba(242,244,247,.95);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
   }
-  .topbar{height:auto;padding:8px 12px}
-  .tabs{display:flex;gap:4px;padding:8px 10px 0}
-  .tab{flex:1;border:none;background:transparent;font-size:14px;color:var(--muted);padding:9px 0 8px;cursor:pointer;font-family:inherit;position:relative}
+  .topbar{height:auto;padding:6px 12px}
+  .tabs{display:flex;gap:4px;padding:5px 10px 0}
+  .tab{flex:1;border:none;background:transparent;font-size:14px;color:var(--muted);padding:7px 0 6px;cursor:pointer;font-family:inherit;position:relative}
   .tab.active{color:var(--text);font-weight:600;background:#fff;border-radius:10px 10px 0 0}
   .tab.active::after{content:'';position:absolute;left:22%;right:22%;bottom:0;height:2px;border-radius:2px}
   .tab-daily.active::after{background:var(--blue)}
   .tab-weekly.active::after{background:var(--green)}
   .tab-monthly.active::after{background:var(--orange)}
   .tab-longterm.active::after{background:var(--purple)}
-  .app{display:block;height:auto;padding:10px}
-  .panel{display:none;min-height:calc(100vh - 190px)}
-  .panel.active{display:flex}
+  .app{display:flex;flex-direction:column;flex:1;height:auto;padding:10px}
+  .panel{display:none}
+  .panel.active{display:flex;flex:1}
   .task-list{overflow:visible}
 }
 </style>

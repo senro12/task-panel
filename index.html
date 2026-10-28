@@ -134,7 +134,7 @@ body{
 .btn-primary:hover{filter:brightness(1.08)}
 .tabs{display:none}
 @media (max-width:900px){
-  body{overflow:auto;display:flex;flex-direction:column;min-height:100vh;min-height:100dvh}
+  body{height:100vh;height:100dvh;overflow:hidden;display:flex;flex-direction:column}
   .chrome{
     position:sticky;top:0;z-index:20;flex-shrink:0;
     background:rgba(242,244,247,.95);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
@@ -148,9 +148,9 @@ body{
   .tab-weekly.active::after{background:var(--green)}
   .tab-monthly.active::after{background:var(--orange)}
   .tab-longterm.active::after{background:var(--purple)}
-  .app{display:flex;flex-direction:column;flex:1;height:auto;padding:0 10px 10px}
+  .app{display:flex;flex-direction:column;flex:1;min-height:0;height:auto;padding:0 10px 10px}
   .panel{display:none}
-  .panel.active{display:flex;flex:1;border-radius:0 0 12px 12px}
+  .panel.active{display:flex;flex:1;min-height:0;border-radius:0 0 12px 12px}
 }
 </style>
 </head>
@@ -869,8 +869,8 @@ document.addEventListener('touchcancel',onTouchEnd);
 if(window.visualViewport){
   const vv=window.visualViewport;
   vv.addEventListener('resize',()=>{
-    if(window.matchMedia('(max-width:900px)').matches)document.body.style.minHeight=vv.height+'px';
-    else document.body.style.minHeight='';
+    if(window.matchMedia('(max-width:900px)').matches)document.body.style.height=vv.height+'px';
+    else document.body.style.height='';
   });
 }
 

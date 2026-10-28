@@ -977,7 +977,7 @@ document.getElementById('export-btn').addEventListener('click',()=>{
   const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
   const a=document.createElement('a');
   a.href=URL.createObjectURL(blob);
-  a.download='任务面板备份-'+dateKey(new Date()).replace(/-/g,'')+'.json';
+  a.download=activeScheme().name.replace(/[\\/:*?"<>|]/g,'_')+'.json';
   document.body.appendChild(a);a.click();a.remove();
   setTimeout(()=>URL.revokeObjectURL(a.href),1000);
   showToast('已导出「'+activeScheme().name+'」：'+tasks.length+' 个任务');

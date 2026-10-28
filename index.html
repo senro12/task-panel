@@ -73,6 +73,7 @@ body{
 .t-head .t-title{flex:1;min-width:0}
 .t-title{font-size:14px;line-height:20px;cursor:text;word-break:break-word}
 .t-title.done{text-decoration:line-through;color:var(--muted)}
+.t-title.opt:not(.done){color:#7b8494}
 .title-input{width:100%;font-size:14px;line-height:20px;border:1px solid var(--blue);border-radius:5px;padding:1px 6px;outline:none;font-family:inherit}
 .pill{flex-shrink:0;font-size:10px;line-height:16px;padding:0 7px;border-radius:9px;cursor:pointer;user-select:none;margin-top:2px;white-space:nowrap;font-family:inherit}
 .pill-must{background:#fdeaea;color:#d13438}
@@ -146,7 +147,7 @@ body{
   .tab-weekly.active::after{background:var(--green)}
   .tab-monthly.active::after{background:var(--orange)}
   .tab-longterm.active::after{background:var(--purple)}
-  .app{display:flex;flex-direction:column;flex:1;height:auto;padding:10px}
+  .app{display:flex;flex-direction:column;flex:1;height:auto;padding:0 10px 10px}
   .panel{display:none}
   .panel.active{display:flex;flex:1}
   .task-list{overflow:visible}
@@ -268,7 +269,7 @@ const WEEKDAY=['日','一','二','三','四','五','六'];
 const NOTE_SVG='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9l-6-6z"/><path d="M14 3v6h6"/></svg>';
 const X_SVG='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>';
 
-let pendingDelete=null,confirmCb=null,confirmAltCb=null,inputCb=null,lastNoteClose=0,doneOpen=true;
+let pendingDelete=null,confirmCb=null,confirmAltCb=null,inputCb=null,lastNoteClose=0,doneOpen=true,dragTaskId=null;
 let groupMenu=null,suppressOpen=false;
 
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,8);}
@@ -295,6 +296,11 @@ function periodKey(board){
   return 'longterm';
 }
 function isDone(t){return t.donePeriod===periodKey(t.board);}
+function sameSection(a,b){
+  if(a.board!==b.board)return false;
+  if(a.board==='longterm')return (a.group||'')===(b.group||'')&&isDone(a)===isDone(b);
+  return (a.priority!=='opt')===(b.priority!=='opt');
+}
 function boardSub(board){
   const now=new Date();
   if(board==='daily')return (now.getMonth()+1)+'月'+now.getDate()+'日 · 周'+WEEKDAY[now.getDay()];
@@ -497,10 +503,23 @@ function taskEl(t){
     pp.addEventListener('click',e=>{e.stopPropagation();t.priority=must?'opt':'must';save();render();});
     head.appendChild(pp);
   }
-  const title=el('div','t-title'+(isDone(t)?' done':''),t.title);
+  const optCls=t.board!=='longterm'&&t.priority==='opt'?' opt':'';
+  const title=el('div','t-title'+(isDone(t)?' done':'')+optCls,t.title);
   title.addEventListener('click',()=>startTitleEdit(t,title));
   head.appendChild(title);
   main.appendChild(head);
+
+  container.addEventListener('dragover',e=>{
+    if(!dragTaskId||dragTaskId===t.id)return;
+    const dragged=tasks.find(x=>x.id===dragTaskId);
+    if(!dragged||!sameSection(dragged,t))return;
+    e.preventDefault();e.stopPropagation();
+    const draggingEl=document.querySelector('.task.dragging');
+    if(!draggingEl)return;
+    const rect=container.getBoundingClientRect();
+    if(e.clientY>rect.top+rect.height/2)container.after(draggingEl);
+    else container.before(draggingEl);
+  });
 
   const noteBtn=el('button','icon-btn note-btn'+(t.note?' has-note':''));
   noteBtn.innerHTML=NOTE_SVG;
@@ -533,7 +552,7 @@ function startTitleEdit(t,titleEl){
     const v=input.value.trim();
     if(ok&&v&&v!==t.title){t.title=v;save();}
     titleEl.textContent=t.title;
-    titleEl.className='t-title'+(isDone(t)?' done':'');
+    titleEl.className='t-title'+(isDone(t)?' done':'')+(t.board!=='longterm'&&t.priority==='opt'?' opt':'');
     taskElm.draggable=true;
   };
   input.addEventListener('keydown',e=>{
@@ -688,28 +707,52 @@ document.getElementById('add-group-btn').addEventListener('click',()=>{
 /* ---------- 拖拽换区 ---------- */
 document.querySelectorAll('.panel').forEach(panel=>{
   const board=panel.dataset.board;
-  panel.addEventListener('dragover',e=>{e.preventDefault();panel.classList.add('drop-target');});
+  panel.addEventListener('dragover',e=>{
+    e.preventDefault();
+    const dt=dragTaskId?tasks.find(x=>x.id===dragTaskId):null;
+    if(dt&&dt.board===board)return;
+    panel.classList.add('drop-target');
+  });
   panel.addEventListener('dragleave',e=>{if(!panel.contains(e.relatedTarget))panel.classList.remove('drop-target');});
   panel.addEventListener('drop',e=>{
     e.preventDefault();panel.classList.remove('drop-target');
     const id=e.dataTransfer.getData('text/plain');
     const t=tasks.find(x=>x.id===id);
-    if(t&&t.board!==board){
-      t.board=board;t.donePeriod=null;
-      if(board==='longterm')t.group=t.group||'';
-      else t.priority=t.priority==='opt'?'opt':'must';
-      save();render();
+    if(!t)return;
+    if(t.board===board){
+      if(!(e.target.closest&&e.target.closest('.task'))){
+        tasks=tasks.filter(x=>x.id!==id);
+        tasks.push(t);
+        save();render();
+      }
+      return;
     }
+    t.board=board;t.donePeriod=null;
+    if(board==='longterm')t.group=t.group||'';
+    else t.priority=t.priority==='opt'?'opt':'must';
+    save();render();
   });
 });
 document.addEventListener('dragstart',e=>{
   const taskElm=e.target.closest?e.target.closest('.task'):null;
   if(!taskElm)return;
   taskElm.classList.add('dragging');
+  dragTaskId=taskElm.dataset.id;
   e.dataTransfer.effectAllowed='move';
   e.dataTransfer.setData('text/plain',taskElm.dataset.id);
 });
 document.addEventListener('dragend',()=>{
+  const dt=dragTaskId?tasks.find(x=>x.id===dragTaskId):null;
+  if(dt){
+    const listEl=document.getElementById('list-'+dt.board);
+    if(listEl){
+      const ids=[...listEl.querySelectorAll('.task')].map(n=>n.dataset.id);
+      const boardTasks=ids.map(id=>tasks.find(x=>x.id===id)).filter(Boolean);
+      if(boardTasks.length)tasks=tasks.filter(x=>x.board!==dt.board).concat(boardTasks);
+      save();
+    }
+  }
+  dragTaskId=null;
   document.querySelectorAll('.dragging').forEach(n=>n.classList.remove('dragging'));
   document.querySelectorAll('.drop-target').forEach(n=>n.classList.remove('drop-target'));
 });

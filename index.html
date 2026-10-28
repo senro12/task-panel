@@ -17,7 +17,8 @@ body{
   background:var(--bg); color:var(--text); overflow:hidden;
 }
 .topbar{height:48px;display:flex;align-items:center;gap:10px;padding:0 18px;flex-shrink:0;background:linear-gradient(135deg,#4f8df7,#7c5cf0 55%,#9d5cf0);box-shadow:0 2px 10px rgba(93,95,240,.28)}
-.app-title{font-size:15px;font-weight:700;color:#fff;display:flex;align-items:center;gap:7px}
+.app-title{font-size:15px;font-weight:700;color:#fff;display:flex;align-items:center;gap:7px;background:transparent;border:none;padding:0;cursor:pointer;font-family:inherit}
+.app-title:hover{opacity:.85}
 .app-title svg{flex-shrink:0}
 .topbar-actions{margin-left:auto;display:flex;gap:8px}
 .scheme-btn{border:none;background:rgba(255,255,255,.22);border-radius:999px;padding:5px 12px;font-size:13px;color:#fff;cursor:pointer;font-family:inherit;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -132,6 +133,15 @@ body{
 .btn-danger:hover{filter:brightness(1.08)}
 .btn-primary{background:var(--blue);color:#fff}
 .btn-primary:hover{filter:brightness(1.08)}
+.help-modal{width:430px;max-width:92vw;max-height:80vh;display:flex;flex-direction:column;padding:0}
+.help-head{display:flex;align-items:center;justify-content:space-between;padding:13px 18px;border-bottom:1px solid var(--line);font-size:15px;font-weight:600;flex-shrink:0}
+.help-close{border:none;background:transparent;font-size:18px;line-height:1;color:var(--muted);cursor:pointer;padding:3px 8px;border-radius:5px;font-family:inherit}
+.help-close:hover{background:#eef0f4;color:var(--text)}
+.help-body{padding:4px 18px 16px;overflow-y:auto;font-size:13px;line-height:1.75}
+.help-body h3{font-size:13px;margin:13px 0 3px}
+.help-body ul{padding-left:18px;margin:0}
+.help-body li{margin:2px 0;color:#4a5261}
+.help-body b{color:var(--text)}
 .tabs{display:none}
 @media (max-width:900px){
   body{height:100vh;height:100dvh;overflow:hidden;display:flex;flex-direction:column}
@@ -157,7 +167,7 @@ body{
 <body>
 <div class="chrome">
   <header class="topbar">
-    <span class="app-title">任务面板</span>
+    <button class="app-title" id="help-btn">任务面板</button>
     <button class="scheme-btn" id="scheme-btn">默认方案</button>
     <span class="topbar-actions">
       <button class="mini-btn" id="export-btn">导出</button>
@@ -225,6 +235,41 @@ body{
       <button class="add-btn" data-addbtn="monthly">＋</button>
     </footer>
   </section>
+</div>
+
+<div class="modal-overlay hidden" id="help-overlay">
+  <div class="modal help-modal">
+    <div class="help-head"><span>使用说明</span><button class="help-close" id="help-close">✕</button></div>
+    <div class="help-body">
+      <h3>操作</h3>
+      <ul>
+        <li><b>添加</b>：面板底部输入文字，回车即可</li>
+        <li><b>完成</b>：勾选左侧方框，完成的任务自动移到下方「已完成」区（点「已完成」可折叠）</li>
+        <li><b>编辑</b>：点击任务文字，改完回车</li>
+        <li><b>备注</b>：点右侧文档图标添加/查看</li>
+        <li><b>删除</b>：点右侧 ×，确认后删除</li>
+        <li><b>排序 / 移动</b>：按住任务拖到想要的位置；拖到其他面板即移动过去（手机长按半秒后拖动）</li>
+        <li><b>必做 / 选做</b>：点击任务前的红/灰标签切换</li>
+        <li><b>分组（长期面板）</b>：点任务上的分组标签选择；面板顶部「＋分组」可新建</li>
+        <li><b>方案</b>：点顶部方案名，可切换 / 新建 / 重命名 / 删除</li>
+        <li><b>备份</b>：顶部「导出」生成备份文件，「导入」可恢复或迁移到其他设备</li>
+      </ul>
+      <h3>刷新规则</h3>
+      <p>任务一直保留，不会消失；只有勾选状态按周期自动恢复为「未完成」：</p>
+      <ul>
+        <li>每日任务：每天重置（今天勾了，明天恢复未完成）</li>
+        <li>每周任务：每周一重置</li>
+        <li>每月任务：每月 1 号重置</li>
+        <li>长期任务：不自动重置，完全手动</li>
+      </ul>
+      <h3>数据说明</h3>
+      <ul>
+        <li>数据只保存在你自己的浏览器里，不会上传，别人看不到</li>
+        <li>换浏览器或换设备数据不互通；用顶部「导出」生成备份文件，在另一设备「导入」即可迁移</li>
+        <li>清除浏览器数据会删掉任务，重要内容请定期导出备份</li>
+      </ul>
+    </div>
+  </div>
 </div>
 
 <div class="modal-overlay hidden" id="confirm-overlay">
@@ -696,11 +741,18 @@ inputField.addEventListener('keydown',e=>{
 
 document.addEventListener('keydown',e=>{
   if(e.key!=='Escape')return;
+  if(!helpOverlay.classList.contains('hidden')){helpOverlay.classList.add('hidden');return;}
   if(!confirmOverlay.classList.contains('hidden')){closeConfirm();return;}
   if(!inputOverlay.classList.contains('hidden')){closeInput();return;}
   closeGroupMenu();
   closeSchemeMenu();
 });
+
+/* ---------- 使用说明 ---------- */
+const helpOverlay=document.getElementById('help-overlay');
+document.getElementById('help-btn').addEventListener('click',()=>helpOverlay.classList.remove('hidden'));
+document.getElementById('help-close').addEventListener('click',()=>helpOverlay.classList.add('hidden'));
+helpOverlay.addEventListener('click',e=>{if(e.target===helpOverlay)helpOverlay.classList.add('hidden');});
 
 /* ---------- 添加任务 ---------- */
 document.querySelectorAll('.add-input').forEach(inp=>{

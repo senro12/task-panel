@@ -74,7 +74,7 @@ body{
 .t-title{font-size:14px;line-height:20px;cursor:text;word-break:break-word}
 .t-title.done{text-decoration:line-through;color:var(--muted)}
 .t-title.opt:not(.done){color:#7b8494}
-.title-input{width:100%;font-size:14px;line-height:20px;border:1px solid var(--blue);border-radius:5px;padding:1px 6px;outline:none;font-family:inherit}
+.title-input{width:100%;font-size:14px;line-height:20px;border:1px solid var(--blue);border-radius:5px;padding:1px 6px;outline:none;font-family:inherit;display:block;resize:none;overflow:hidden;word-break:break-word}
 .pill{flex-shrink:0;font-size:10px;line-height:16px;padding:0 7px;border-radius:9px;cursor:pointer;user-select:none;margin-top:2px;white-space:nowrap;font-family:inherit}
 .pill-must{background:#fdeaea;color:#d13438}
 .pill-must:hover{background:#f9d7d7}
@@ -547,29 +547,41 @@ function taskEl(t){
 }
 
 function startTitleEdit(t,titleEl){
-  if(titleEl.querySelector('input'))return;
+  if(titleEl.querySelector('textarea'))return;
   const taskElm=titleEl.closest('.task');
   taskElm.draggable=false;
-  const input=document.createElement('input');
-  input.className='title-input';input.value=t.title;
-  titleEl.textContent='';titleEl.appendChild(input);
-  input.focus();input.select();
+  const ta=document.createElement('textarea');
+  ta.className='title-input';
+  ta.rows=1;
+  ta.value=t.title;
+  titleEl.textContent='';
+  titleEl.appendChild(ta);
+  const fit=()=>{ta.style.height='auto';ta.style.height=ta.scrollHeight+'px';};
+  fit();
+  ta.focus();
+  if(window.matchMedia('(hover: none)').matches){
+    const len=ta.value.length;
+    ta.setSelectionRange(len,len);
+  }else{
+    ta.select();
+  }
   let closed=false;
   const finish=ok=>{
     if(closed)return;closed=true;
-    const v=input.value.trim();
+    const v=ta.value.replace(/[\r\n]+/g,' ').trim();
     if(ok&&v&&v!==t.title){t.title=v;save();}
     titleEl.textContent=t.title;
     titleEl.className='t-title'+(isDone(t)?' done':'')+(t.board!=='longterm'&&t.priority==='opt'?' opt':'');
     taskElm.draggable=true;
   };
-  input.addEventListener('keydown',e=>{
+  ta.addEventListener('keydown',e=>{
     e.stopPropagation();
-    if(e.key==='Enter')finish(true);
+    if(e.key==='Enter'){e.preventDefault();finish(true);}
     else if(e.key==='Escape')finish(false);
   });
-  input.addEventListener('blur',()=>finish(true));
-  input.addEventListener('click',e=>e.stopPropagation());
+  ta.addEventListener('input',fit);
+  ta.addEventListener('blur',()=>finish(true));
+  ta.addEventListener('click',e=>e.stopPropagation());
 }
 
 function refreshNoteBtn(taskElm,t){

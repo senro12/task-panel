@@ -92,6 +92,7 @@ body{
 .sec-head.toggle{cursor:pointer}
 .sec-head .chev{font-size:10px;color:var(--muted);width:10px}
 .sec-count{font-weight:400;color:var(--muted)}
+.sec-divider{height:1px;background:var(--line);margin:10px 0 4px}
 .group-row{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);margin:8px 0 2px;padding:0 2px}
 .group-name{font-weight:500}
 .g-must .group-name{color:#d13438}
@@ -425,8 +426,8 @@ function render(){
 
 function secHead(label,count,toggle){
   const h=el('div','sec-head'+(toggle?' toggle':''));
-  if(toggle)h.appendChild(el('span','chev',doneOpen?'▾':'▸'));
   h.appendChild(el('span',null,label));
+  if(toggle)h.appendChild(el('span','chev',doneOpen?'▾':'▸'));
   h.appendChild(el('span','sec-count',count));
   if(toggle)h.addEventListener('click',()=>{doneOpen=!doneOpen;render();});
   return h;
@@ -469,6 +470,7 @@ function renderLongterm(){
   if(!lt.length)return;
   list.appendChild(secHead('未完成',lt.length-doneArr.length,false));
   appendGrouped(list,lt.filter(t=>!isDone(t)),false);
+  list.appendChild(el('div','sec-divider'));
   list.appendChild(secHead('已完成',doneArr.length,true));
   if(doneOpen)appendGrouped(list,doneArr,true);
 }

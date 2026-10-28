@@ -19,6 +19,18 @@ body{
 .topbar{height:46px;display:flex;align-items:center;gap:10px;padding:0 18px;flex-shrink:0}
 .app-title{font-size:14px;font-weight:600}
 .topbar-actions{margin-left:auto;display:flex;gap:8px}
+.scheme-btn{border:none;background:#eef0f4;border-radius:8px;padding:4px 10px;font-size:13px;color:var(--text);cursor:pointer;font-family:inherit;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.scheme-btn:hover{background:#e4e7ee}
+.pop-row{display:flex;align-items:center;gap:2px;padding:0 2px}
+.pop-row .pop-item{flex:1}
+.pop-row.active .pop-item{color:var(--blue);font-weight:500}
+.pop-act{border:none;background:transparent;color:var(--muted);cursor:pointer;padding:4px;border-radius:5px;font-size:12px;line-height:1;flex-shrink:0;opacity:0}
+.pop-row:hover .pop-act{opacity:1}
+.pop-act:hover{background:#e9edf2;color:var(--text)}
+.pop-del:hover{color:var(--danger);background:#fdeaea}
+.btn-alt{background:#eef4ff;color:var(--blue)}
+.btn-alt:hover{background:#e0ebff}
+@media (hover:none){.pop-act{opacity:.5}}
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#2c3340;color:#fff;font-size:13px;padding:8px 16px;border-radius:8px;z-index:70;opacity:0;transition:opacity .2s;pointer-events:none}
 .toast.show{opacity:1}
 .app{
@@ -142,6 +154,7 @@ body{
 <div class="chrome">
   <header class="topbar">
     <span class="app-title">任务面板</span>
+    <button class="scheme-btn" id="scheme-btn">默认方案</button>
     <span class="topbar-actions">
       <button class="mini-btn" id="export-btn">导出</button>
       <button class="mini-btn" id="import-btn">导入</button>
@@ -219,6 +232,7 @@ body{
     <p class="modal-hint" id="confirm-hint"></p>
     <div class="modal-actions">
       <button class="btn-cancel" id="confirm-cancel">取消</button>
+      <button class="btn-alt" id="confirm-alt" hidden>导入为新方案</button>
       <button class="btn-danger" id="confirm-ok">删除</button>
     </div>
   </div>
@@ -251,7 +265,7 @@ const WEEKDAY=['日','一','二','三','四','五','六'];
 const NOTE_SVG='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9l-6-6z"/><path d="M14 3v6h6"/></svg>';
 const X_SVG='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>';
 
-let pendingDelete=null,confirmCb=null,inputCb=null,lastNoteClose=0,doneOpen=true;
+let pendingDelete=null,confirmCb=null,confirmAltCb=null,inputCb=null,lastNoteClose=0,doneOpen=true;
 let groupMenu=null,suppressOpen=false;
 
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,8);}
@@ -321,22 +335,45 @@ function normalize(arr,gs){
   return{tasks,groups};
 }
 function load(){
+  let schemes=[],activeId=null;
+  const mk=(name,data)=>({id:uid(),name,createdAt:new Date().toISOString(),data});
   try{
     const raw=localStorage.getItem(STORAGE_KEY);
     if(raw){
       const data=JSON.parse(raw);
-      const arr=Array.isArray(data)?data:(data&&Array.isArray(data.tasks))?data.tasks:[];
-      const gs=Array.isArray(data)?[]:(data&&Array.isArray(data.groups))?data.groups:[];
-      return normalize(arr,gs);
+      if(data&&Array.isArray(data.schemes)&&data.schemes.length){
+        schemes=data.schemes
+          .filter(s=>s&&s.data&&typeof s.name==='string')
+          .map(s=>({id:s.id||uid(),name:s.name,createdAt:s.createdAt||new Date().toISOString(),
+            data:normalize(s.data.tasks,s.data.groups)}));
+        activeId=(data.activeId&&schemes.some(s=>s.id===data.activeId))?data.activeId:(schemes[0]&&schemes[0].id);
+      }else{
+        const arr=Array.isArray(data)?data:(data&&Array.isArray(data.tasks))?data.tasks:[];
+        const gs=Array.isArray(data)?[]:(data&&Array.isArray(data.groups))?data.groups:[];
+        schemes=[mk('默认方案',normalize(arr,gs))];
+        activeId=schemes[0].id;
+      }
     }
   }catch(e){}
-  if(DEMO){const d=demoData();return normalize(d.tasks,d.groups);}
-  return{tasks:[],groups:[]};
+  if(!schemes.length){
+    if(DEMO){const d=demoData();schemes=[mk('默认方案',normalize(d.tasks,d.groups))];}
+    else schemes=[mk('默认方案',{tasks:[],groups:[]})];
+    activeId=schemes[0].id;
+  }
+  return{schemes,activeId};
 }
 let state=load();
-let tasks=state.tasks;
-let groups=state.groups;
-function save(){localStorage.setItem(STORAGE_KEY,JSON.stringify({tasks,groups}));}
+let schemes=state.schemes;
+let activeId=state.activeId;
+function activeScheme(){return schemes.find(s=>s.id===activeId);}
+function reloadWorking(){const s=activeScheme();tasks=s.data.tasks;groups=s.data.groups;}
+let tasks=activeScheme().data.tasks;
+let groups=activeScheme().data.groups;
+function save(){
+  const s=activeScheme();
+  if(s)s.data={tasks,groups};
+  localStorage.setItem(STORAGE_KEY,JSON.stringify({version:3,schemes,activeId}));
+}
 
 function el(tag,cls,text){
   const e=document.createElement(tag);
@@ -349,7 +386,12 @@ function pill(text,cls){
   return p;
 }
 
+function renderTopbar(){
+  const s=activeScheme();
+  document.getElementById('scheme-btn').textContent=s?s.name:'';
+}
 function render(){
+  renderTopbar();
   for(const key of ['daily','weekly','monthly']){
     const list=document.getElementById('list-'+key);
     list.textContent='';
@@ -569,19 +611,24 @@ function openGroupMenu(t,anchor){
 document.addEventListener('mousedown',e=>{
   if(groupMenu&&!groupMenu.contains(e.target)){closeGroupMenu();suppressOpen=true;}
   else suppressOpen=false;
+  if(schemeMenu&&!schemeMenu.contains(e.target))closeSchemeMenu();
 });
 
 /* ---------- 确认弹窗 ---------- */
 const confirmOverlay=document.getElementById('confirm-overlay');
-function openConfirm(text,hint,okLabel,cb){
+const confirmAlt=document.getElementById('confirm-alt');
+function openConfirm(text,hint,okLabel,cb,altLabel,altCb){
   document.getElementById('confirm-text').textContent=text;
   document.getElementById('confirm-hint').textContent=hint;
   document.getElementById('confirm-ok').textContent=okLabel;
   confirmCb=cb;
+  if(altLabel){confirmAlt.hidden=false;confirmAlt.textContent=altLabel;confirmAltCb=altCb;}
+  else{confirmAlt.hidden=true;confirmAltCb=null;}
   confirmOverlay.classList.remove('hidden');
 }
-function closeConfirm(){confirmOverlay.classList.add('hidden');confirmCb=null;}
+function closeConfirm(){confirmOverlay.classList.add('hidden');confirmCb=null;confirmAltCb=null;}
 document.getElementById('confirm-ok').addEventListener('click',()=>{const cb=confirmCb;closeConfirm();if(cb)cb();});
+confirmAlt.addEventListener('click',()=>{const cb=confirmAltCb;closeConfirm();if(cb)cb();});
 document.getElementById('confirm-cancel').addEventListener('click',closeConfirm);
 confirmOverlay.addEventListener('click',e=>{if(e.target===confirmOverlay)closeConfirm();});
 
@@ -610,6 +657,7 @@ document.addEventListener('keydown',e=>{
   if(!confirmOverlay.classList.contains('hidden')){closeConfirm();return;}
   if(!inputOverlay.classList.contains('hidden')){closeInput();return;}
   closeGroupMenu();
+  closeSchemeMenu();
 });
 
 /* ---------- 添加任务 ---------- */
@@ -672,6 +720,71 @@ document.querySelectorAll('.tab').forEach(btn=>{
   });
 });
 
+/* ---------- 方案管理 ---------- */
+let schemeMenu=null;
+function closeSchemeMenu(){if(schemeMenu){schemeMenu.remove();schemeMenu=null;}}
+document.getElementById('scheme-btn').addEventListener('click',e=>{
+  e.stopPropagation();
+  openSchemeMenu(e.currentTarget);
+});
+function openSchemeMenu(anchor){
+  if(suppressOpen){suppressOpen=false;return;}
+  closeSchemeMenu();closeGroupMenu();
+  const menu=el('div','pop-menu');
+  schemes.forEach(s=>{
+    const row=el('div','pop-row'+(s.id===activeId?' active':''));
+    const b=el('button','pop-item',s.name);
+    b.title='切换到「'+s.name+'」（'+s.data.tasks.length+' 个任务）';
+    b.addEventListener('click',()=>{closeSchemeMenu();switchScheme(s.id);});
+    row.appendChild(b);
+    const ren=el('button','pop-act','✎');ren.title='重命名';
+    ren.addEventListener('click',ev=>{
+      ev.stopPropagation();closeSchemeMenu();
+      openInputModal('重命名方案','输入方案名称',v=>{
+        v=v.trim();if(!v)return;
+        s.name=v;save();render();
+      });
+    });
+    const del=el('button','pop-act pop-del','✕');del.title='删除方案';
+    del.addEventListener('click',ev=>{
+      ev.stopPropagation();closeSchemeMenu();
+      if(schemes.length<=1){showToast('至少保留一个方案');return;}
+      openConfirm('删除方案「'+s.name+'」？','方案内 '+s.data.tasks.length+' 个任务将一并删除，无法恢复','删除',()=>{
+        schemes=schemes.filter(x=>x.id!==s.id);
+        if(activeId===s.id){activeId=schemes[0].id;reloadWorking();}
+        save();render();
+      });
+    });
+    row.append(ren,del);
+    menu.appendChild(row);
+  });
+  menu.appendChild(el('div','pop-divider'));
+  const nb=el('button','pop-item new','＋ 新建方案');
+  nb.addEventListener('click',()=>{
+    closeSchemeMenu();
+    openInputModal('新建方案','输入方案名称',v=>{
+      v=v.trim();if(!v)return;
+      const s={id:uid(),name:v,createdAt:new Date().toISOString(),data:{tasks:[],groups:[]}};
+      schemes.push(s);activeId=s.id;reloadWorking();save();render();
+      showToast('已创建并切换到「'+v+'」');
+    });
+  });
+  menu.appendChild(nb);
+  document.body.appendChild(menu);
+  const r=anchor.getBoundingClientRect();
+  const mw=menu.offsetWidth,mh=menu.offsetHeight;
+  let left=Math.max(10,Math.min(r.left,window.innerWidth-mw-10));
+  let top=r.bottom+4;
+  if(top+mh>window.innerHeight-10)top=Math.max(10,r.top-mh-4);
+  menu.style.left=left+'px';menu.style.top=top+'px';
+  schemeMenu=menu;
+}
+function switchScheme(id){
+  if(id===activeId)return;
+  activeId=id;reloadWorking();save();render();
+  showToast('已切换到「'+activeScheme().name+'」');
+}
+
 /* ---------- 导入 / 导出 ---------- */
 const toastEl=document.createElement('div');
 toastEl.className='toast';
@@ -692,7 +805,7 @@ document.getElementById('export-btn').addEventListener('click',()=>{
   a.download='任务面板备份-'+dateKey(new Date()).replace(/-/g,'')+'.json';
   document.body.appendChild(a);a.click();a.remove();
   setTimeout(()=>URL.revokeObjectURL(a.href),1000);
-  showToast('已导出 '+tasks.length+' 个任务');
+  showToast('已导出「'+activeScheme().name+'」：'+tasks.length+' 个任务');
 });
 
 const importFile=document.getElementById('import-file');
@@ -708,11 +821,19 @@ importFile.addEventListener('change',()=>{
     const arr=Array.isArray(parsed)?parsed:(parsed&&Array.isArray(parsed.tasks))?parsed.tasks:null;
     if(!arr){showToast('文件里没有任务数据');return;}
     const gs=Array.isArray(parsed)?[]:(parsed.groups||[]);
-    openConfirm('导入备份「'+f.name+'」？','将覆盖当前全部数据（当前 '+tasks.length+' 个任务，备份含 '+arr.length+' 个）','覆盖导入',()=>{
+    openConfirm('导入备份「'+f.name+'」？','当前方案「'+activeScheme().name+'」有 '+tasks.length+' 个任务，备份含 '+arr.length+' 个','覆盖当前方案',()=>{
       const st=normalize(arr,gs);
       tasks=st.tasks;groups=st.groups;
       save();render();
-      showToast('导入成功：'+tasks.length+' 个任务');
+      showToast('已覆盖当前方案：'+tasks.length+' 个任务');
+    },'导入为新方案',()=>{
+      const name=f.name.replace(/\.json$/i,'')||'导入方案';
+      const st=normalize(arr,gs);
+      const s={id:uid(),name:name,createdAt:new Date().toISOString(),data:st};
+      schemes.push(s);activeId=s.id;
+      tasks=st.tasks;groups=st.groups;
+      save();render();
+      showToast('已导入为新方案「'+name+'」：'+tasks.length+' 个任务');
     });
   };
   reader.readAsText(f);

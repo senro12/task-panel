@@ -63,6 +63,9 @@ body{
 .task{background:#f7f8fa;border:1px solid #eef0f4;border-radius:8px;padding:8px 10px;margin-bottom:8px}
 .task:hover{border-color:#dfe3ea}
 .task.dragging{opacity:.4}
+.task{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.task input,.task textarea{-webkit-user-select:text;user-select:text}
+.touch-ghost{position:fixed;left:0;top:0;z-index:100;pointer-events:none;opacity:.95;box-shadow:0 10px 28px rgba(16,24,40,.28);margin:0}
 .task-row{display:flex;gap:8px;align-items:flex-start}
 .task input[type=checkbox]{width:16px;height:16px;flex-shrink:0;cursor:pointer;margin-top:2px}
 .t-main{flex:1;min-width:0}
@@ -148,7 +151,6 @@ body{
   .app{display:flex;flex-direction:column;flex:1;height:auto;padding:0 10px 10px}
   .panel{display:none}
   .panel.active{display:flex;flex:1;border-radius:0 0 12px 12px}
-  .task-list{overflow:visible}
 }
 </style>
 </head>
@@ -711,6 +713,19 @@ document.getElementById('add-group-btn').addEventListener('click',()=>{
 });
 
 /* ---------- 拖拽换区 ---------- */
+function persistBoardOrder(board){
+  const listEl=document.getElementById('list-'+board);
+  if(!listEl)return;
+  const ids=[...listEl.querySelectorAll('.task')].map(n=>n.dataset.id);
+  const boardTasks=ids.map(id=>tasks.find(x=>x.id===id)).filter(Boolean);
+  if(boardTasks.length)tasks=tasks.filter(x=>x.board!==board).concat(boardTasks);
+  save();
+}
+function applyBoardChange(t,board){
+  t.board=board;t.donePeriod=null;
+  if(board==='longterm')t.group=t.group||'';
+  else t.priority=t.priority==='opt'?'opt':'must';
+}
 document.querySelectorAll('.panel').forEach(panel=>{
   const board=panel.dataset.board;
   panel.addEventListener('dragover',e=>{
@@ -733,9 +748,7 @@ document.querySelectorAll('.panel').forEach(panel=>{
       }
       return;
     }
-    t.board=board;t.donePeriod=null;
-    if(board==='longterm')t.group=t.group||'';
-    else t.priority=t.priority==='opt'?'opt':'must';
+    applyBoardChange(t,board);
     save();render();
   });
 });
@@ -749,19 +762,117 @@ document.addEventListener('dragstart',e=>{
 });
 document.addEventListener('dragend',()=>{
   const dt=dragTaskId?tasks.find(x=>x.id===dragTaskId):null;
-  if(dt){
-    const listEl=document.getElementById('list-'+dt.board);
-    if(listEl){
-      const ids=[...listEl.querySelectorAll('.task')].map(n=>n.dataset.id);
-      const boardTasks=ids.map(id=>tasks.find(x=>x.id===id)).filter(Boolean);
-      if(boardTasks.length)tasks=tasks.filter(x=>x.board!==dt.board).concat(boardTasks);
-      save();
-    }
-  }
+  if(dt)persistBoardOrder(dt.board);
   dragTaskId=null;
   document.querySelectorAll('.dragging').forEach(n=>n.classList.remove('dragging'));
   document.querySelectorAll('.drop-target').forEach(n=>n.classList.remove('drop-target'));
 });
+
+/* ---------- 触屏长按拖拽 ---------- */
+let touchDrag=null;
+function startTouchDrag(td){
+  td.active=true;
+  if(navigator.vibrate)navigator.vibrate(30);
+  td.ghost=td.el.cloneNode(true);
+  td.ghost.className='task touch-ghost';
+  td.ghost.style.width=td.el.getBoundingClientRect().width+'px';
+  td.ghost.style.transform='translate('+(td.lastX-td.ox)+'px,'+(td.lastY-td.oy)+'px) scale(1.04)';
+  document.body.appendChild(td.ghost);
+  td.el.classList.add('dragging');
+  requestAnimationFrame(touchLoop);
+}
+function touchHitTest(x,y){
+  const td=touchDrag;
+  if(!td||!td.active)return;
+  const under=document.elementFromPoint(x,y);
+  const taskElm=under?under.closest('.task'):null;
+  if(!taskElm||taskElm===td.el)return;
+  const target=tasks.find(t=>t.id===taskElm.dataset.id);
+  if(!target||!sameSection(td.task,target))return;
+  const rect=taskElm.getBoundingClientRect();
+  if(y>rect.top+rect.height/2)taskElm.after(td.el);
+  else taskElm.before(td.el);
+}
+function touchLoop(){
+  const td=touchDrag;
+  if(!td||!td.active)return;
+  const listEl=document.getElementById('list-'+td.task.board);
+  if(listEl){
+    const rect=listEl.getBoundingClientRect();
+    const zone=56;
+    if(td.lastY<rect.top+zone)listEl.scrollTop-=(rect.top+zone-td.lastY)*0.22;
+    else if(td.lastY>rect.bottom-zone)listEl.scrollTop+=(td.lastY-rect.bottom+zone)*0.22;
+  }
+  touchHitTest(td.lastX,td.lastY);
+  requestAnimationFrame(touchLoop);
+}
+document.addEventListener('touchstart',e=>{
+  if(e.touches.length!==1)return;
+  const t=e.touches[0];
+  const el=e.target.closest?e.target.closest('.task'):null;
+  if(!el)return;
+  if(e.target.closest('input,button,textarea,.note-editor,.pill'))return;
+  const task=tasks.find(x=>x.id===el.dataset.id);
+  if(!task)return;
+  const rect=el.getBoundingClientRect();
+  touchDrag={el,task,identifier:t.identifier,startX:t.clientX,startY:t.clientY,
+    lastX:t.clientX,lastY:t.clientY,ox:t.clientX-rect.left,oy:t.clientY-rect.top,
+    active:false,ghost:null,
+    timer:setTimeout(()=>{
+      if(touchDrag&&touchDrag.el===el)startTouchDrag(touchDrag);
+    },250)};
+},{passive:true});
+document.addEventListener('touchmove',e=>{
+  const td=touchDrag;
+  if(!td)return;
+  let t=null;
+  for(const tt of e.touches){if(tt.identifier===td.identifier){t=tt;break;}}
+  if(!t)return;
+  td.lastX=t.clientX;td.lastY=t.clientY;
+  if(!td.active){
+    if(Math.abs(t.clientX-td.startX)>10||Math.abs(t.clientY-td.startY)>10){
+      clearTimeout(td.timer);touchDrag=null;
+    }
+    return;
+  }
+  e.preventDefault();
+  td.ghost.style.transform='translate('+(t.clientX-td.ox)+'px,'+(t.clientY-td.oy)+'px) scale(1.04)';
+  touchHitTest(t.clientX,t.clientY);
+},{passive:false});
+function onTouchEnd(e){
+  const td=touchDrag;
+  if(!td)return;
+  let ours=false;
+  for(const ct of e.changedTouches){if(ct.identifier===td.identifier)ours=true;}
+  if(!ours)return;
+  clearTimeout(td.timer);
+  const wasActive=td.active;
+  touchDrag=null;
+  if(!wasActive)return;
+  if(e.cancelable)e.preventDefault();
+  if(td.ghost)td.ghost.remove();
+  td.el.classList.remove('dragging');
+  const under=document.elementFromPoint(td.lastX,td.lastY);
+  const panel=under?under.closest('.panel'):null;
+  const newBoard=panel?panel.dataset.board:null;
+  if(newBoard&&newBoard!==td.task.board){
+    applyBoardChange(td.task,newBoard);
+    save();render();
+  }else{
+    persistBoardOrder(td.task.board);
+  }
+}
+document.addEventListener('touchend',onTouchEnd);
+document.addEventListener('touchcancel',onTouchEnd);
+
+/* ---------- 手机键盘弹出时压缩面板高度 ---------- */
+if(window.visualViewport){
+  const vv=window.visualViewport;
+  vv.addEventListener('resize',()=>{
+    if(window.matchMedia('(max-width:900px)').matches)document.body.style.minHeight=vv.height+'px';
+    else document.body.style.minHeight='';
+  });
+}
 
 /* ---------- 窄屏 Tab 切换 ---------- */
 document.querySelectorAll('.tab').forEach(btn=>{

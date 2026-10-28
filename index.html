@@ -92,7 +92,7 @@ body{
 .sec-head.toggle{cursor:pointer}
 .sec-head .chev{font-size:10px;color:var(--muted);width:10px}
 .sec-count{font-weight:400;color:var(--muted)}
-.sec-divider{height:1px;background:var(--line);margin:10px 0 4px}
+.sec-divider{height:1px;background:var(--line);margin:10px 0}
 .group-row{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);margin:8px 0 2px;padding:0 2px}
 .group-name{font-weight:500}
 .g-must .group-name{color:#d13438}
@@ -264,7 +264,8 @@ const WEEKDAY=['日','一','二','三','四','五','六'];
 const NOTE_SVG='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9l-6-6z"/><path d="M14 3v6h6"/></svg>';
 const X_SVG='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>';
 
-let pendingDelete=null,confirmCb=null,confirmAltCb=null,inputCb=null,lastNoteClose=0,doneOpen=true,dragTaskId=null;
+let pendingDelete=null,confirmCb=null,confirmAltCb=null,inputCb=null,lastNoteClose=0,dragTaskId=null;
+let doneOpen={longterm:true,daily:true,weekly:true,monthly:true};
 let groupMenu=null,suppressOpen=false;
 
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,8);}
@@ -294,7 +295,7 @@ function isDone(t){return t.donePeriod===periodKey(t.board);}
 function sameSection(a,b){
   if(a.board!==b.board)return false;
   if(a.board==='longterm')return (a.group||'')===(b.group||'')&&isDone(a)===isDone(b);
-  return (a.priority!=='opt')===(b.priority!=='opt');
+  return (a.priority!=='opt')===(b.priority!=='opt')&&isDone(a)===isDone(b);
 }
 function boardSub(board){
   const now=new Date();
@@ -394,42 +395,51 @@ function renderTopbar(){
   const s=activeScheme();
   document.getElementById('scheme-btn').textContent=s?s.name:'';
 }
+function periodicSubsections(list,arr){
+  const must=arr.filter(t=>t.priority!=='opt');
+  const opt=arr.filter(t=>t.priority==='opt');
+  if(must.length){
+    const h=el('div','group-row g-must');
+    h.appendChild(el('span','group-name','必做'));
+    h.appendChild(el('span','group-count',must.length));
+    list.appendChild(h);
+    must.forEach(t=>list.appendChild(taskEl(t)));
+  }
+  if(opt.length){
+    const h=el('div','group-row g-opt');
+    h.appendChild(el('span','group-name','选做'));
+    h.appendChild(el('span','group-count',opt.length));
+    list.appendChild(h);
+    opt.forEach(t=>list.appendChild(taskEl(t)));
+  }
+}
 function render(){
   renderTopbar();
   for(const key of ['daily','weekly','monthly']){
     const list=document.getElementById('list-'+key);
     list.textContent='';
     const bt=tasks.filter(t=>t.board===key);
-    const must=bt.filter(t=>t.priority!=='opt');
-    const opt=bt.filter(t=>t.priority==='opt');
-    let done=0;bt.forEach(t=>{if(isDone(t))done++;});
-    if(must.length){
-      const h=el('div','group-row g-must');
-      h.appendChild(el('span','group-name','必做'));
-      h.appendChild(el('span','group-count',must.length));
-      list.appendChild(h);
-      must.forEach(t=>list.appendChild(taskEl(t)));
-    }
-    if(opt.length){
-      const h=el('div','group-row g-opt');
-      h.appendChild(el('span','group-name','选做'));
-      h.appendChild(el('span','group-count',opt.length));
-      list.appendChild(h);
-      opt.forEach(t=>list.appendChild(taskEl(t)));
-    }
+    const undone=bt.filter(t=>!isDone(t));
+    const doneArr=bt.filter(t=>isDone(t));
     document.getElementById('empty-'+key).style.display=bt.length?'none':'flex';
-    document.getElementById('count-'+key).textContent=bt.length?done+'/'+bt.length:'';
+    document.getElementById('count-'+key).textContent=bt.length?doneArr.length+'/'+bt.length:'';
     document.getElementById('sub-'+key).textContent=boardSub(key);
+    if(!bt.length)continue;
+    list.appendChild(secHead('未完成',undone.length,false));
+    periodicSubsections(list,undone);
+    list.appendChild(el('div','sec-divider'));
+    list.appendChild(secHead('已完成',doneArr.length,key));
+    if(doneOpen[key])periodicSubsections(list,doneArr);
   }
   renderLongterm();
 }
 
-function secHead(label,count,toggle){
-  const h=el('div','sec-head'+(toggle?' toggle':''));
+function secHead(label,count,toggleKey){
+  const h=el('div','sec-head'+(toggleKey?' toggle':''));
   h.appendChild(el('span',null,label));
-  if(toggle)h.appendChild(el('span','chev',doneOpen?'▾':'▸'));
+  if(toggleKey)h.appendChild(el('span','chev',doneOpen[toggleKey]?'▾':'▸'));
   h.appendChild(el('span','sec-count',count));
-  if(toggle)h.addEventListener('click',()=>{doneOpen=!doneOpen;render();});
+  if(toggleKey)h.addEventListener('click',()=>{doneOpen[toggleKey]=!doneOpen[toggleKey];render();});
   return h;
 }
 function groupRow(name,count){
@@ -471,8 +481,8 @@ function renderLongterm(){
   list.appendChild(secHead('未完成',lt.length-doneArr.length,false));
   appendGrouped(list,lt.filter(t=>!isDone(t)),false);
   list.appendChild(el('div','sec-divider'));
-  list.appendChild(secHead('已完成',doneArr.length,true));
-  if(doneOpen)appendGrouped(list,doneArr,true);
+  list.appendChild(secHead('已完成',doneArr.length,'longterm'));
+  if(doneOpen.longterm)appendGrouped(list,doneArr,true);
 }
 
 function taskEl(t){

@@ -554,7 +554,22 @@ function taskEl(t){
     const must=t.priority!=='opt';
     const pp=pill(must?'必做':'选做',must?'pill-must':'pill-opt');
     pp.title='点击切换为'+(must?'选做':'必做');
-    pp.addEventListener('click',e=>{e.stopPropagation();t.priority=must?'opt':'must';save();render();});
+    pp.addEventListener('click',e=>{
+      e.stopPropagation();
+      const wasMust=must;
+      /* 按位插入：先在原分组中定位，再改优先级 */
+      const boardTasks=tasks.filter(x=>x.board===t.board);
+      const srcGroup=boardTasks.filter(x=>(x.priority!=='opt')===wasMust);
+      const idx=srcGroup.indexOf(t);
+      t.priority=wasMust?'opt':'must';
+      const targetGroup=boardTasks.filter(x=>x!==t&&(x.priority!=='opt')!==wasMust);
+      const newGroup=[...targetGroup.slice(0,idx),t,...targetGroup.slice(idx)];
+      const newBoard=wasMust
+        ?[...srcGroup.filter(x=>x!==t),...newGroup]
+        :[...newGroup,...srcGroup.filter(x=>x!==t)];
+      tasks=tasks.filter(x=>x.board!==t.board).concat(newBoard);
+      save();render();
+    });
     head.appendChild(pp);
   }
   const optCls=t.board!=='longterm'&&t.priority==='opt'?' opt':'';

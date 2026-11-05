@@ -487,7 +487,7 @@ function render(){
     document.getElementById('empty-'+key).style.display=bt.length?'none':'flex';
     document.getElementById('count-'+key).textContent=bt.length?doneArr.length+'/'+bt.length:'';
     const remainEl=document.getElementById('remain-'+key);
-    remainEl.textContent='剩 '+undone.length;
+    remainEl.textContent=undone.length;
     remainEl.className='remain remain-'+key+(undone.length?'':' zero');
     const tabRemain=document.getElementById('tabremain-'+key);
     tabRemain.textContent=undone.length;
@@ -548,7 +548,7 @@ function renderLongterm(){
   const undoneArr=lt.filter(t=>!isDone(t));
   document.getElementById('count-longterm').textContent=lt.length?doneArr.length+'/'+lt.length:'';
   const remainEl=document.getElementById('remain-longterm');
-  remainEl.textContent='剩 '+undoneArr.length;
+  remainEl.textContent=undoneArr.length;
   remainEl.className='remain remain-longterm'+(undoneArr.length?'':' zero');
   const tabRemain=document.getElementById('tabremain-longterm');
   tabRemain.textContent=undoneArr.length;

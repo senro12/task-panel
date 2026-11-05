@@ -54,6 +54,12 @@ body{
 .panel-title h2{font-size:15px;font-weight:600}
 .count{margin-left:auto;font-size:12px;color:var(--muted);background:#f1f3f6;border-radius:10px;padding:1px 8px}
 .count:empty{display:none}
+.remain{flex-shrink:0;font-size:11px;line-height:16px;padding:0 7px;border-radius:9px}
+.remain-longterm{background:#f1ebfd;color:#7c4fe0}
+.remain-daily{background:#e8f0fe;color:#2563eb}
+.remain-weekly{background:#e5f8ec;color:#16a34a}
+.remain-monthly{background:#fdf3e0;color:#d97706}
+.remain.zero{background:#f1f3f6;color:#b8bfca}
 .mini-btn{border:none;background:#f1f3f6;color:#5b6472;font-size:11px;border-radius:6px;padding:2px 8px;cursor:pointer;font-family:inherit}
 .mini-btn:hover{background:#e6e9ef}
 .topbar .mini-btn{background:rgba(255,255,255,.22);color:#fff;font-size:12px;padding:4px 12px;border-radius:999px}
@@ -187,6 +193,7 @@ body{
     <header class="panel-head">
       <div class="panel-title">
         <h2>长期</h2>
+        <span class="remain remain-longterm" id="remain-longterm"></span>
         <span class="panel-sub" id="sub-longterm">手动勾选 · 不自动重置</span>
         <span class="count" id="count-longterm"></span>
         <button class="mini-btn" id="add-group-btn">＋ 分组</button>
@@ -202,7 +209,7 @@ body{
 
   <section class="panel active" id="panel-daily" data-board="daily">
     <header class="panel-head">
-      <div class="panel-title"><h2>每日</h2><span class="panel-sub" id="sub-daily"></span><span class="count" id="count-daily"></span></div>
+      <div class="panel-title"><h2>每日</h2><span class="remain remain-daily" id="remain-daily"></span><span class="panel-sub" id="sub-daily"></span><span class="count" id="count-daily"></span></div>
     </header>
     <div class="task-list" id="list-daily"></div>
     <div class="empty" id="empty-daily">暂无任务</div>
@@ -214,7 +221,7 @@ body{
 
   <section class="panel" id="panel-weekly" data-board="weekly">
     <header class="panel-head">
-      <div class="panel-title"><h2>每周</h2><span class="panel-sub" id="sub-weekly"></span><span class="count" id="count-weekly"></span></div>
+      <div class="panel-title"><h2>每周</h2><span class="remain remain-weekly" id="remain-weekly"></span><span class="panel-sub" id="sub-weekly"></span><span class="count" id="count-weekly"></span></div>
     </header>
     <div class="task-list" id="list-weekly"></div>
     <div class="empty" id="empty-weekly">暂无任务</div>
@@ -226,7 +233,7 @@ body{
 
   <section class="panel" id="panel-monthly" data-board="monthly">
     <header class="panel-head">
-      <div class="panel-title"><h2>每月</h2><span class="panel-sub" id="sub-monthly"></span><span class="count" id="count-monthly"></span></div>
+      <div class="panel-title"><h2>每月</h2><span class="remain remain-monthly" id="remain-monthly"></span><span class="panel-sub" id="sub-monthly"></span><span class="count" id="count-monthly"></span></div>
     </header>
     <div class="task-list" id="list-monthly"></div>
     <div class="empty" id="empty-monthly">暂无任务</div>
@@ -471,6 +478,9 @@ function render(){
     const doneArr=bt.filter(t=>isDone(t));
     document.getElementById('empty-'+key).style.display=bt.length?'none':'flex';
     document.getElementById('count-'+key).textContent=bt.length?doneArr.length+'/'+bt.length:'';
+    const remainEl=document.getElementById('remain-'+key);
+    remainEl.textContent='剩 '+undone.length;
+    remainEl.className='remain remain-'+key+(undone.length?'':' zero');
     document.getElementById('sub-'+key).textContent=boardSub(key);
     if(!bt.length)continue;
     list.appendChild(secHead('未完成',undone.length,false));
@@ -524,7 +534,11 @@ function renderLongterm(){
   const lt=tasks.filter(t=>t.board==='longterm');
   document.getElementById('empty-longterm').style.display=lt.length?'none':'flex';
   const doneArr=lt.filter(t=>isDone(t));
+  const undoneArr=lt.filter(t=>!isDone(t));
   document.getElementById('count-longterm').textContent=lt.length?doneArr.length+'/'+lt.length:'';
+  const remainEl=document.getElementById('remain-longterm');
+  remainEl.textContent='剩 '+undoneArr.length;
+  remainEl.className='remain remain-longterm'+(undoneArr.length?'':' zero');
   if(!lt.length)return;
   list.appendChild(secHead('未完成',lt.length-doneArr.length,false));
   appendGrouped(list,lt.filter(t=>!isDone(t)),false);

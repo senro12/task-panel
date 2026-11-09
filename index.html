@@ -481,7 +481,7 @@ function render(){
     list.textContent='';
     const bt=tasks.filter(t=>t.board===key);
     const undone=bt.filter(t=>!isDone(t));
-    const undoneCounted=undone.filter(t=>t.priority!=='other').length;
+    const undoneCounted=undone.filter(t=>t.priority==='must').length;
     const doneArr=bt.filter(t=>isDone(t));
     document.getElementById('empty-'+key).style.display=bt.length?'none':'flex';
     document.getElementById('count-'+key).textContent=bt.length?doneArr.length+'/'+bt.length:'';

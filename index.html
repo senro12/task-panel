@@ -81,13 +81,15 @@ body{
 .t-head .t-title{flex:1;min-width:0}
 .t-title{font-size:14px;line-height:20px;cursor:text;word-break:break-word}
 .t-title.done{text-decoration:line-through;color:var(--muted)}
-.t-title.opt:not(.done){color:#7b8494}
+.t-title.opt:not(.done),.t-title.other:not(.done){color:#7b8494}
 .title-input{width:100%;font-size:14px;line-height:20px;border:1px solid var(--blue);border-radius:5px;padding:1px 6px;outline:none;font-family:inherit;display:block;resize:none;overflow:hidden;word-break:break-word}
 .pill{flex-shrink:0;font-size:10px;line-height:16px;padding:0 7px;border-radius:9px;cursor:pointer;user-select:none;margin-top:2px;white-space:nowrap;font-family:inherit}
 .pill-must{background:#fdeaea;color:#d13438}
 .pill-must:hover{background:#f9d7d7}
-.pill-opt{background:#edf0f4;color:#8a93a3}
-.pill-opt:hover{background:#e3e7ee}
+.pill-opt{background:#e8f0fe;color:#2563eb}
+.pill-opt:hover{background:#dbe9fe}
+.pill-other{background:#edf0f4;color:#8a93a3}
+.pill-other:hover{background:#e3e7ee}
 .pill-group{background:#eef2ff;color:#6366f1;max-width:96px;overflow:hidden;text-overflow:ellipsis}
 .pill-group:hover{background:#e0e7ff}
 .icon-btn{border:none;background:transparent;cursor:pointer;color:var(--muted);padding:2px;border-radius:5px;opacity:0;transition:opacity .12s,background .12s;flex-shrink:0;display:flex;align-items:center}
@@ -107,7 +109,8 @@ body{
 .group-row{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);margin:8px 0 2px;padding:0 2px}
 .group-name{font-weight:500}
 .g-must .group-name{color:#d13438}
-.g-opt .group-name{color:#8a93a3}
+.g-opt .group-name{color:#2563eb}
+.g-other .group-name{color:#8a93a3}
 .group-count{font-size:11px;opacity:.85}
 .group-del{margin-left:auto;border:none;background:transparent;color:var(--muted);cursor:pointer;padding:1px;border-radius:4px;opacity:0;display:flex}
 .group-row:hover .group-del{opacity:1}
@@ -264,7 +267,7 @@ body{
         <li><b>备注</b>：点右侧文档图标添加/查看</li>
         <li><b>删除</b>：点右侧 ×，确认后删除</li>
         <li><b>排序 / 移动</b>：按住任务拖到想要的位置；拖到其他面板即移动过去（手机长按半秒后拖动）</li>
-        <li><b>必做 / 选做</b>：点击任务前的红/灰标签切换</li>
+        <li><b>优先级</b>：点击任务前的标签，在必做 / 选做 / 其他间选择</li>
         <li><b>分组（长期面板）</b>：点任务上的分组标签选择；面板顶部「＋分组」可新建</li>
         <li><b>方案</b>：点顶部方案名，可切换 / 新建 / 重命名 / 删除</li>
         <li><b>备份</b>：顶部「导出」生成备份文件，「导入」可恢复或迁移到其他设备</li>
@@ -378,6 +381,7 @@ function demoData(){
       {id:'demo-d1',board:'daily',title:'晨间复盘 10 分钟',note:'',priority:'must',donePeriod:periodKey('daily')},
       {id:'demo-d2',board:'daily',title:'阅读 30 页',note:'',priority:'opt',donePeriod:null},
       {id:'demo-d3',board:'daily',title:'运动 30 分钟',note:'保持心率区间',priority:'must',donePeriod:null},
+      {id:'demo-d4',board:'daily',title:'整理桌面',note:'',priority:'other',donePeriod:null},
       {id:'demo-w1',board:'weekly',title:'整理周报',note:'',priority:'must',donePeriod:null},
       {id:'demo-w2',board:'weekly',title:'照片备份到 NAS',note:'',priority:'opt',donePeriod:periodKey('weekly')},
       {id:'demo-m1',board:'monthly',title:'月度预算核对',note:'',priority:'must',donePeriod:null},
@@ -395,7 +399,7 @@ function normalize(arr,gs){
     .map(t=>({
       id:t.id||uid(),board:t.board,title:t.title,note:t.note||'',
       donePeriod:t.donePeriod||null,
-      priority:t.priority==='opt'?'opt':'must',
+      priority:['must','opt','other'].includes(t.priority)?t.priority:'must',
       group:(t.board==='longterm'&&typeof t.group==='string')?t.group:''
     }));
   const groups=(Array.isArray(gs)?gs:[]).filter(g=>typeof g==='string'&&g);
@@ -459,21 +463,15 @@ function renderTopbar(){
   document.getElementById('scheme-btn').textContent=s?s.name:'';
 }
 function periodicSubsections(list,arr){
-  const must=arr.filter(t=>t.priority!=='opt');
-  const opt=arr.filter(t=>t.priority==='opt');
-  if(must.length){
-    const h=el('div','group-row g-must');
-    h.appendChild(el('span','group-name','必做'));
-    h.appendChild(el('span','group-count',must.length));
+  const tiers=[['must','必做','g-must'],['opt','选做','g-opt'],['other','其他','g-other']];
+  for(const[p,label,cls]of tiers){
+    const gt=arr.filter(t=>t.priority===p);
+    if(!gt.length)continue;
+    const h=el('div','group-row '+cls);
+    h.appendChild(el('span','group-name',label));
+    h.appendChild(el('span','group-count',gt.length));
     list.appendChild(h);
-    must.forEach(t=>list.appendChild(taskEl(t)));
-  }
-  if(opt.length){
-    const h=el('div','group-row g-opt');
-    h.appendChild(el('span','group-name','选做'));
-    h.appendChild(el('span','group-count',opt.length));
-    list.appendChild(h);
-    opt.forEach(t=>list.appendChild(taskEl(t)));
+    gt.forEach(t=>list.appendChild(taskEl(t)));
   }
 }
 function render(){
@@ -483,16 +481,16 @@ function render(){
     list.textContent='';
     const bt=tasks.filter(t=>t.board===key);
     const undone=bt.filter(t=>!isDone(t));
-    const undoneMust=undone.filter(t=>t.priority!=='opt');
+    const undoneCounted=undone.filter(t=>t.priority!=='other').length;
     const doneArr=bt.filter(t=>isDone(t));
     document.getElementById('empty-'+key).style.display=bt.length?'none':'flex';
     document.getElementById('count-'+key).textContent=bt.length?doneArr.length+'/'+bt.length:'';
     const remainEl=document.getElementById('remain-'+key);
-    remainEl.textContent=undoneMust.length;
-    remainEl.className='remain remain-'+key+(undoneMust.length?'':' zero');
+    remainEl.textContent=undoneCounted;
+    remainEl.className='remain remain-'+key+(undoneCounted?'':' zero');
     const tabRemain=document.getElementById('tabremain-'+key);
-    tabRemain.textContent=undoneMust.length;
-    tabRemain.className='tab-remain tab-remain-'+key+(undoneMust.length?'':' zero');
+    tabRemain.textContent=undoneCounted;
+    tabRemain.className='tab-remain tab-remain-'+key+(undoneCounted?'':' zero');
     document.getElementById('sub-'+key).textContent=boardSub(key);
     if(!bt.length)continue;
     list.appendChild(secHead('未完成',undone.length,false));
@@ -580,14 +578,15 @@ function taskEl(t){
     gp.addEventListener('click',e=>{e.stopPropagation();openGroupMenu(t,gp);});
     head.appendChild(gp);
   }else{
-    const must=t.priority!=='opt';
-    const pp=pill(must?'必做':'选做',must?'pill-must':'pill-opt');
-    pp.title='点击切换为'+(must?'选做':'必做');
-    pp.addEventListener('click',e=>{e.stopPropagation();t.priority=must?'opt':'must';save();render();});
+    const TIERS={must:['必做','pill-must'],opt:['选做','pill-opt'],other:['其他','pill-other']};
+    const[tl,pc]=TIERS[t.priority]||TIERS.must;
+    const pp=pill(tl,pc);
+    pp.title='点击调整档位';
+    pp.addEventListener('click',e=>{e.stopPropagation();openTierMenu(t,pp);});
     head.appendChild(pp);
   }
-  const optCls=t.board!=='longterm'&&t.priority==='opt'?' opt':'';
-  const title=el('div','t-title'+(isDone(t)?' done':'')+optCls,t.title);
+  const dimCls=t.priority==='opt'?' opt':(t.priority==='other'?' other':'');
+  const title=el('div','t-title'+(isDone(t)?' done':'')+dimCls,t.title);
   title.addEventListener('click',()=>startTitleEdit(t,title));
   head.appendChild(title);
   main.appendChild(head);
@@ -646,7 +645,7 @@ function startTitleEdit(t,titleEl){
     const v=ta.value.replace(/[\r\n]+/g,' ').trim();
     if(ok&&v&&v!==t.title){t.title=v;save();}
     titleEl.textContent=t.title;
-    titleEl.className='t-title'+(isDone(t)?' done':'')+(t.board!=='longterm'&&t.priority==='opt'?' opt':'');
+    titleEl.className='t-title'+(isDone(t)?' done':'')+(t.priority==='opt'?' opt':(t.priority==='other'?' other':''));
     taskElm.draggable=true;
   };
   ta.addEventListener('keydown',e=>{
@@ -725,9 +724,46 @@ function openGroupMenu(t,anchor){
   menu.style.left=left+'px';menu.style.top=top+'px';
   groupMenu=menu;
 }
+/* ---------- 优先级档位菜单 ---------- */
+let tierMenu=null;
+function closeTierMenu(){if(tierMenu){tierMenu.remove();tierMenu=null;}}
+function openTierMenu(t,anchor){
+  if(suppressOpen){suppressOpen=false;return;}
+  closeTierMenu();closeGroupMenu();
+  const menu=el('div','pop-menu');
+  [['must','必做'],['opt','选做'],['other','其他']].forEach(([p,label])=>{
+    const b=el('button','pop-item'+(t.priority===p?' active':''),label);
+    b.addEventListener('click',()=>{closeTierMenu();changeTier(t,p);});
+    menu.appendChild(b);
+  });
+  document.body.appendChild(menu);
+  const r=anchor.getBoundingClientRect();
+  const mw=menu.offsetWidth,mh=menu.offsetHeight;
+  let left=Math.max(10,Math.min(r.left,window.innerWidth-mw-10));
+  let top=r.bottom+4;
+  if(top+mh>window.innerHeight-10)top=Math.max(10,r.top-mh-4);
+  menu.style.left=left+'px';menu.style.top=top+'px';
+  tierMenu=menu;
+}
+function changeTier(t,newPriority){
+  const old=t.priority;
+  if(old===newPriority)return;
+  /* 按位插入：新档位中的相对位置与原档位一致 */
+  const boardTasks=tasks.filter(x=>x.board===t.board);
+  const srcGroup=boardTasks.filter(x=>x.priority===old);
+  const idx=Math.max(0,srcGroup.indexOf(t));
+  t.priority=newPriority;
+  const groups={must:[],other:[],opt:[]};
+  boardTasks.forEach(x=>{if(x!==t)groups[x.priority].push(x);});
+  groups[newPriority].splice(Math.min(idx,groups[newPriority].length),0,t);
+  const ordered=[...groups.must,...groups.opt,...groups.other];
+  tasks=tasks.filter(x=>x.board!==t.board).concat(ordered);
+  save();render();
+}
 document.addEventListener('mousedown',e=>{
   if(groupMenu&&!groupMenu.contains(e.target)){closeGroupMenu();suppressOpen=true;}
   else suppressOpen=false;
+  if(tierMenu&&!tierMenu.contains(e.target)){closeTierMenu();suppressOpen=true;}
   if(schemeMenu&&!schemeMenu.contains(e.target))closeSchemeMenu();
 });
 
@@ -775,6 +811,7 @@ document.addEventListener('keydown',e=>{
   if(!confirmOverlay.classList.contains('hidden')){closeConfirm();return;}
   if(!inputOverlay.classList.contains('hidden')){closeInput();return;}
   closeGroupMenu();
+  closeTierMenu();
   closeSchemeMenu();
 });
 

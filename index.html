@@ -698,7 +698,18 @@ function openGroupMenu(t,anchor){
   const menu=el('div','pop-menu');
   const addOption=(label,val)=>{
     const b=el('button','pop-item'+((t.group||'')===val?' active':''),label);
-    b.addEventListener('click',()=>{closeGroupMenu();t.group=val;save();render();});
+    b.addEventListener('click',()=>{
+      closeGroupMenu();
+      t.group=val;
+      /* 落到新分组列表底部 */
+      const lt=tasks.filter(x=>x.board==='longterm'&&x!==t);
+      const ordered=[];
+      for(const g of groups){for(const x of lt){if((x.group||'')===g)ordered.push(x);}}
+      for(const x of lt){if(!x.group)ordered.push(x);}
+      ordered.push(t);
+      tasks=tasks.filter(x=>x.board!=='longterm').concat(ordered);
+      save();render();
+    });
     menu.appendChild(b);
   };
   addOption('未分组','');
@@ -748,14 +759,11 @@ function openTierMenu(t,anchor){
 function changeTier(t,newPriority){
   const old=t.priority;
   if(old===newPriority)return;
-  /* 按位插入：新档位中的相对位置与原档位一致 */
-  const boardTasks=tasks.filter(x=>x.board===t.board);
-  const srcGroup=boardTasks.filter(x=>x.priority===old);
-  const idx=Math.max(0,srcGroup.indexOf(t));
   t.priority=newPriority;
+  /* 落到新档位列表底部 */
   const groups={must:[],other:[],opt:[]};
-  boardTasks.forEach(x=>{if(x!==t)groups[x.priority].push(x);});
-  groups[newPriority].splice(Math.min(idx,groups[newPriority].length),0,t);
+  tasks.filter(x=>x.board===t.board&&x!==t).forEach(x=>groups[x.priority].push(x));
+  groups[newPriority].push(t);
   const ordered=[...groups.must,...groups.opt,...groups.other];
   tasks=tasks.filter(x=>x.board!==t.board).concat(ordered);
   save();render();

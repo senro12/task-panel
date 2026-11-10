@@ -210,7 +210,7 @@ body{
       <div class="panel-title">
         <h2>长期</h2>
         <span class="remain remain-longterm" id="remain-longterm"></span>
-        <span class="panel-sub" id="sub-longterm">手动勾选 · 不自动重置</span>
+        <span class="panel-sub" id="sub-longterm">不重置</span>
         <span class="count" id="count-longterm"></span>
         <button class="mini-btn" id="add-group-btn">＋ 分组</button>
       </div>
@@ -377,7 +377,7 @@ function boardSub(board){
     return '第'+isoWeek(now)+'周 · '+pad(mon.getMonth()+1)+'.'+pad(mon.getDate())+' - '+pad(sun.getMonth()+1)+'.'+pad(sun.getDate());
   }
   if(board==='monthly')return now.getFullYear()+'年'+(now.getMonth()+1)+'月';
-  return '手动勾选 · 不自动重置';
+  return '不重置';
 }
 function demoData(){
   return{

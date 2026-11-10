@@ -65,6 +65,9 @@ body{
 .mini-btn:hover{background:#e6e9ef}
 .topbar .mini-btn{background:rgba(255,255,255,.22);color:#fff;font-size:12px;padding:4px 12px;border-radius:999px}
 .topbar .mini-btn:hover{background:rgba(255,255,255,.34)}
+.topbar .mini-btn.on{background:#fff;color:#5b5fc7}
+.topbar .mini-btn.on:hover{background:#f0f1ff}
+.t-note{font-size:12px;line-height:17px;color:#8a93a3;margin-top:3px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word;cursor:pointer}
 .panel-sub{font-size:12px;color:var(--muted)}
 .task-list{flex:1;overflow-y:auto;padding:10px 12px;min-height:0}
 .task-list:empty{padding:0}
@@ -187,6 +190,7 @@ body{
     <button class="app-title" id="help-btn">任务面板</button>
     <button class="scheme-btn" id="scheme-btn">默认方案</button>
     <span class="topbar-actions">
+      <button class="mini-btn" id="notes-btn">备注常显</button>
       <button class="mini-btn" id="export-btn">导出</button>
       <button class="mini-btn" id="import-btn">导入</button>
     </span>
@@ -264,7 +268,7 @@ body{
         <li><b>添加</b>：面板底部输入文字，回车即可</li>
         <li><b>完成</b>：勾选左侧方框，完成的任务自动移到下方「已完成」区（点「已完成」可折叠）</li>
         <li><b>编辑</b>：点击任务文字，改完回车</li>
-        <li><b>备注</b>：点右侧文档图标添加/查看</li>
+        <li><b>备注</b>：点右侧文档图标添加/查看；顶栏「备注常显」开关可让备注直接显示在任务下方</li>
         <li><b>删除</b>：点右侧 ×，确认后删除</li>
         <li><b>排序 / 移动</b>：按住任务拖到想要的位置；拖到其他面板即移动过去（手机长按半秒后拖动）</li>
         <li><b>优先级</b>：点击任务前的标签，在必做 / 选做 / 其他间选择</li>
@@ -407,12 +411,13 @@ function normalize(arr,gs){
   return{tasks,groups};
 }
 function load(){
-  let schemes=[],activeId=null;
+  let schemes=[],activeId=null,showNotes=false;
   const mk=(name,data)=>({id:uid(),name,createdAt:new Date().toISOString(),data});
   try{
     const raw=localStorage.getItem(STORAGE_KEY);
     if(raw){
       const data=JSON.parse(raw);
+      showNotes=!!(data&&data.showNotes);
       if(data&&Array.isArray(data.schemes)&&data.schemes.length){
         schemes=data.schemes
           .filter(s=>s&&s.data&&typeof s.name==='string')
@@ -432,11 +437,12 @@ function load(){
     else schemes=[mk('默认方案',{tasks:[],groups:[]})];
     activeId=schemes[0].id;
   }
-  return{schemes,activeId};
+  return{schemes,activeId,showNotes};
 }
 let state=load();
 let schemes=state.schemes;
 let activeId=state.activeId;
+let showNotes=state.showNotes;
 function activeScheme(){return schemes.find(s=>s.id===activeId);}
 function reloadWorking(){const s=activeScheme();tasks=s.data.tasks;groups=s.data.groups;}
 let tasks=activeScheme().data.tasks;
@@ -444,7 +450,7 @@ let groups=activeScheme().data.groups;
 function save(){
   const s=activeScheme();
   if(s)s.data={tasks,groups};
-  localStorage.setItem(STORAGE_KEY,JSON.stringify({version:3,schemes,activeId}));
+  localStorage.setItem(STORAGE_KEY,JSON.stringify({version:3,schemes,activeId,showNotes}));
 }
 
 function el(tag,cls,text){
@@ -590,6 +596,11 @@ function taskEl(t){
   title.addEventListener('click',()=>startTitleEdit(t,title));
   head.appendChild(title);
   main.appendChild(head);
+  if(showNotes&&t.note){
+    const nd=el('div','t-note',t.note);
+    nd.addEventListener('click',e=>{e.stopPropagation();toggleNoteEditor(t,container);});
+    main.appendChild(nd);
+  }
 
   container.addEventListener('dragover',e=>{
     if(!dragTaskId||dragTaskId===t.id)return;
@@ -828,6 +839,12 @@ const helpOverlay=document.getElementById('help-overlay');
 document.getElementById('help-btn').addEventListener('click',()=>helpOverlay.classList.remove('hidden'));
 document.getElementById('help-close').addEventListener('click',()=>helpOverlay.classList.add('hidden'));
 helpOverlay.addEventListener('click',e=>{if(e.target===helpOverlay)helpOverlay.classList.add('hidden');});
+
+/* ---------- 备注常显开关 ---------- */
+const notesBtn=document.getElementById('notes-btn');
+function renderNotesBtn(){notesBtn.className='mini-btn'+(showNotes?' on':'');}
+notesBtn.addEventListener('click',()=>{showNotes=!showNotes;save();renderNotesBtn();render();});
+renderNotesBtn();
 
 /* ---------- 添加任务 ---------- */
 document.querySelectorAll('.add-input').forEach(inp=>{

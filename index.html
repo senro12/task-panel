@@ -1112,29 +1112,32 @@ document.addEventListener('touchmove',e=>{
     swipeCtx.inner.style.transform='translateX('+swipeCtx.dx+'px)';
     return;
   }
-  const td=touchDrag;if(!td)return;
+  const td=touchDrag;
+  const sp=swipePending;
+  if(!td&&!sp)return;
+  const ref=sp||td;
   let t=null;
-  for(const tt of e.touches){if(tt.identifier===td.identifier)t=tt;}
+  for(const tt of e.touches){if(tt.identifier===ref.identifier)t=tt;}
   if(!t)return;
-  td.lastX=t.clientX;td.lastY=t.clientY;
-  if(!td.active){
-    const dx=t.clientX-td.startX,dy=t.clientY-td.startY;
-    if(Math.abs(dx)>12||Math.abs(dy)>12){
-      clearTimeout(td.timer);
-      if(Math.abs(dx)>Math.abs(dy)&&dx<0&&swipePending&&swipePending.identifier===td.identifier){
-        swipeCtx=swipePending;swipeCtx.active=true;
-        swipeCtx.lastX=t.clientX;
-        swipeCtx.dx=Math.max(-80,Math.min(0,dx));
-        swipeCtx.el.classList.add('swiping');
-        swipeCtx.inner.style.transform='translateX('+swipeCtx.dx+'px)';
-        touchDrag=null;
-      }else{touchDrag=null;}
-    }
-    return;
+  if(td){td.lastX=t.clientX;td.lastY=t.clientY;}
+  const dx=t.clientX-ref.startX,dy=t.clientY-ref.startY;
+  if(td&&!td.active){
+    if(Math.abs(dx)>6&&Math.abs(dx)>Math.abs(dy)){clearTimeout(td.timer);}
+    if(Math.abs(dx)>12||Math.abs(dy)>12){touchDrag=null;}
   }
-  e.preventDefault();
-  td.ghost.style.transform='translate('+(t.clientX-td.ox)+'px,'+(t.clientY-td.oy)+'px) scale(1.04)';
-  touchHitTest(t.clientX,t.clientY);
+  if(sp&&!sp.active&&Math.abs(dx)>12&&Math.abs(dx)>Math.abs(dy)&&dx<0){
+    swipeCtx=sp;swipeCtx.active=true;
+    swipeCtx.lastX=t.clientX;
+    swipeCtx.dx=Math.max(-80,Math.min(0,dx));
+    swipeCtx.el.classList.add('swiping');
+    swipeCtx.inner.style.transform='translateX('+swipeCtx.dx+'px)';
+    if(td){clearTimeout(td.timer);touchDrag=null;}
+  }
+  if(td&&td.active){
+    e.preventDefault();
+    td.ghost.style.transform='translate('+(t.clientX-td.ox)+'px,'+(t.clientY-td.oy)+'px) scale(1.04)';
+    touchHitTest(t.clientX,t.clientY);
+  }
 },{passive:false});
 function onTouchEnd(e){
   if(swipeCtx){

@@ -94,6 +94,9 @@ body{
 .pill-opt:hover{background:#dbe9fe}
 .pill-other{background:#edf0f4;color:#8a93a3}
 .pill-other:hover{background:#e3e7ee}
+.pill-quota{background:#eef2ff;color:#6366f1}
+.pill-quota:hover{background:#e0e7ff}
+.pill-quota-done{background:#f1f3f6;color:#b8bfca}
 .pill-group{background:#eef2ff;color:#6366f1;max-width:96px;overflow:hidden;text-overflow:ellipsis}
 .pill-group:hover{background:#e0e7ff}
 .icon-btn{border:none;background:transparent;cursor:pointer;color:var(--muted);padding:2px;border-radius:5px;opacity:0;transition:opacity .12s,background .12s;flex-shrink:0;display:flex;align-items:center}
@@ -273,6 +276,7 @@ body{
         <li><b>删除</b>：点右侧 ×，确认后删除</li>
         <li><b>排序 / 移动</b>：按住任务拖到想要的位置；拖到其他面板即移动过去（手机长按半秒后拖动）</li>
         <li><b>优先级</b>：点击任务前的标签，在必做 / 选做 / 其他间选择</li>
+        <li><b>每周次数</b>：每日任务点标签菜单「设置每周次数」，设为 N 后每周完成 N 次即本周封版，下周一重新计数</li>
         <li><b>分组（长期面板）</b>：点任务上的分组标签选择；面板顶部「＋分组」可新建</li>
         <li><b>方案</b>：点顶部方案名，可切换 / 新建 / 重命名 / 删除</li>
         <li><b>备份</b>：顶部「导出」生成备份文件，「导入」可恢复或迁移到其他设备</li>
@@ -362,7 +366,14 @@ function periodKey(board){
   if(board==='monthly')return shifted.getFullYear()+'-'+pad(shifted.getMonth()+1);
   return 'longterm';
 }
-function isDone(t){return t.donePeriod===periodKey(t.board);}
+function weekDoneCount(t){
+  const wk=periodKey('weekly');
+  return (t.doneLog||[]).filter(k=>k===wk).length;
+}
+function isDone(t){
+  if(t.board==='daily'&&t.weeklyTarget>0&&weekDoneCount(t)>=t.weeklyTarget)return true;
+  return t.donePeriod===periodKey(t.board);
+}
 function sameSection(a,b){
   if(a.board!==b.board)return false;
   if(a.board==='longterm')return (a.group||'')===(b.group||'')&&isDone(a)===isDone(b);
@@ -387,6 +398,7 @@ function demoData(){
       {id:'demo-d2',board:'daily',title:'阅读 30 页',note:'',priority:'opt',donePeriod:null},
       {id:'demo-d3',board:'daily',title:'运动 30 分钟',note:'保持心率区间',priority:'must',donePeriod:null},
       {id:'demo-d4',board:'daily',title:'整理桌面',note:'',priority:'other',donePeriod:null},
+      {id:'demo-d5',board:'daily',title:'背单词 30 个',note:'',priority:'must',weeklyTarget:3,doneLog:[periodKey('weekly')],donePeriod:null},
       {id:'demo-w1',board:'weekly',title:'整理周报',note:'',priority:'must',donePeriod:null},
       {id:'demo-w2',board:'weekly',title:'照片备份到 NAS',note:'',priority:'opt',donePeriod:periodKey('weekly')},
       {id:'demo-m1',board:'monthly',title:'月度预算核对',note:'',priority:'must',donePeriod:null},
@@ -405,7 +417,9 @@ function normalize(arr,gs){
       id:t.id||uid(),board:t.board,title:t.title,note:t.note||'',
       donePeriod:t.donePeriod||null,
       priority:['must','opt','other'].includes(t.priority)?t.priority:'must',
-      group:(t.board==='longterm'&&typeof t.group==='string')?t.group:''
+      group:(t.board==='longterm'&&typeof t.group==='string')?t.group:'',
+      weeklyTarget:(t.board==='daily'&&Number(t.weeklyTarget)>0)?Number(t.weeklyTarget):undefined,
+      doneLog:Array.isArray(t.doneLog)?t.doneLog.filter(k=>typeof k==='string').slice(-31):[]
     }));
   const groups=(Array.isArray(gs)?gs:[]).filter(g=>typeof g==='string'&&g);
   tasks.forEach(t=>{if(t.board==='longterm'&&t.group&&!groups.includes(t.group))groups.push(t.group);});
@@ -575,7 +589,24 @@ function taskEl(t){
   const cb=document.createElement('input');
   cb.type='checkbox';cb.checked=isDone(t);
   cb.style.accentColor=isDone(t)?DONE_COLOR:BOARDS[t.board].color;
-  cb.addEventListener('change',()=>{t.donePeriod=cb.checked?periodKey(t.board):null;save();render();});
+  cb.addEventListener('change',()=>{
+    if(t.board==='daily'&&t.weeklyTarget>0){
+      const wk=periodKey('weekly');
+      t.doneLog=t.doneLog||[];
+      if(cb.checked){
+        t.donePeriod=periodKey(t.board);
+        t.doneLog.push(wk);
+      }else{
+        t.donePeriod=null;
+        const i=t.doneLog.lastIndexOf(wk);
+        if(i>=0)t.doneLog.splice(i,1);
+      }
+      t.doneLog=t.doneLog.filter(k=>k===wk);
+    }else{
+      t.donePeriod=cb.checked?periodKey(t.board):null;
+    }
+    save();render();
+  });
 
   const main=el('div','t-main');
   const head=el('div','t-head');
@@ -591,6 +622,13 @@ function taskEl(t){
     pp.title='点击调整档位';
     pp.addEventListener('click',e=>{e.stopPropagation();openTierMenu(t,pp);});
     head.appendChild(pp);
+  }
+  if(t.board==='daily'&&t.weeklyTarget>0){
+    const cnt=weekDoneCount(t);
+    const qb=pill(cnt+'/'+t.weeklyTarget,cnt>=t.weeklyTarget?'pill-quota-done':'pill-quota');
+    qb.title='每周 '+t.weeklyTarget+' 次，点击设置';
+    qb.addEventListener('click',e=>{e.stopPropagation();openQuotaModal(t);});
+    head.appendChild(qb);
   }
   const dimCls=t.priority==='opt'?' opt':(t.priority==='other'?' other':'');
   const title=el('div','t-title'+(isDone(t)?' done':'')+dimCls,t.title);
@@ -759,6 +797,12 @@ function openTierMenu(t,anchor){
     b.addEventListener('click',()=>{closeTierMenu();changeTier(t,p);});
     menu.appendChild(b);
   });
+  if(t.board==='daily'){
+    menu.appendChild(el('div','pop-divider'));
+    const qb=el('button','pop-item new','设置每周次数…');
+    qb.addEventListener('click',()=>{closeTierMenu();openQuotaModal(t);});
+    menu.appendChild(qb);
+  }
   document.body.appendChild(menu);
   const r=anchor.getBoundingClientRect();
   const mw=menu.offsetWidth,mh=menu.offsetHeight;
@@ -779,6 +823,18 @@ function changeTier(t,newPriority){
   const ordered=[...groups.must,...groups.opt,...groups.other];
   tasks=tasks.filter(x=>x.board!==t.board).concat(ordered);
   save();render();
+}
+function openQuotaModal(t){
+  openInputModal('设置每周次数','输入每周次数，清空恢复每天刷新',v=>{
+    v=v.trim();
+    if(!v){delete t.weeklyTarget;t.doneLog=[];}
+    else{
+      const n=parseInt(v,10);
+      if(n>0){t.weeklyTarget=n;t.doneLog=t.doneLog||[];}
+      else{showToast('请输入大于 0 的数字');return;}
+    }
+    save();render();
+  });
 }
 document.addEventListener('mousedown',e=>{
   if(groupMenu&&!groupMenu.contains(e.target)){closeGroupMenu();suppressOpen=true;}
@@ -882,6 +938,7 @@ function applyBoardChange(t,board){
   t.board=board;t.donePeriod=null;
   if(board==='longterm')t.group=t.group||'';
   else t.priority=t.priority==='opt'?'opt':'must';
+  if(board!=='daily'){delete t.weeklyTarget;t.doneLog=[];}
 }
 document.querySelectorAll('.panel').forEach(panel=>{
   const board=panel.dataset.board;

@@ -148,6 +148,11 @@ body{
 .btn-cancel:hover{background:#e4e7ec}
 .btn-danger{background:var(--danger);color:#fff}
 .btn-danger:hover{filter:brightness(1.08)}
+.quota-fields{margin-top:12px;display:flex;flex-direction:column;gap:10px}
+.quota-field{display:flex;align-items:center;gap:10px}
+.quota-field span{font-size:13px;color:var(--muted);flex-shrink:0;width:60px}
+.quota-field input{flex:1;min-width:0;border:1px solid var(--line);border-radius:8px;padding:7px 10px;font-size:13px;outline:none;font-family:inherit;background:#fff;color:var(--text)}
+.quota-field input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(59,130,246,.12)}
 .btn-text-danger{margin-right:auto;background:transparent;color:var(--danger);padding:7px 4px;font-size:13px}
 .btn-text-danger:hover{text-decoration:underline}
 .btn-primary{background:var(--blue);color:#fff}
@@ -301,6 +306,22 @@ body{
   </div>
 </div>
 
+<div class="modal-overlay hidden" id="quota-overlay">
+  <div class="modal">
+    <p class="modal-text">设置每周次数</p>
+    <div class="quota-fields">
+      <label class="quota-field"><span>每周次数</span><input type="text" id="quota-target" inputmode="numeric"></label>
+      <label class="quota-field"><span>本周已计</span><input type="text" id="quota-count" inputmode="numeric"></label>
+    </div>
+    <p class="modal-hint">每周次数留空或 0 = 删除设定，恢复每天刷新；本周已计可改，超过每周次数按满额处理</p>
+    <div class="modal-actions">
+      <button class="btn-text-danger" id="quota-del" hidden>删除设定</button>
+      <button class="btn-cancel" id="quota-cancel">取消</button>
+      <button class="btn-primary" id="quota-ok">确定</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay hidden" id="confirm-overlay">
   <div class="modal">
     <p class="modal-text" id="confirm-text"></p>
@@ -318,7 +339,6 @@ body{
     <p class="modal-text" id="input-label">新建分组</p>
     <input type="text" class="modal-input" id="input-field" placeholder="输入分组名称">
     <div class="modal-actions">
-      <button class="btn-text-danger" id="input-extra" hidden>清零本周计数</button>
       <button class="btn-cancel" id="input-cancel">取消</button>
       <button class="btn-primary" id="input-ok">确定</button>
     </div>
@@ -341,7 +361,7 @@ const WEEKDAY=['日','一','二','三','四','五','六'];
 const NOTE_SVG='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9l-6-6z"/><path d="M14 3v6h6"/></svg>';
 const X_SVG='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>';
 
-let pendingDelete=null,confirmCb=null,confirmAltCb=null,inputCb=null,lastNoteClose=0,dragTaskId=null;
+let pendingDelete=null,confirmCb=null,confirmAltCb=null,inputCb=null,lastNoteClose=0,dragTaskId=null,quotaCtx=null;
 let doneOpen={longterm:true,daily:true,weekly:true,monthly:true};
 let groupMenu=null,suppressOpen=false;
 
@@ -827,22 +847,50 @@ function changeTier(t,newPriority){
   tasks=tasks.filter(x=>x.board!==t.board).concat(ordered);
   save();render();
 }
+const quotaOverlay=document.getElementById('quota-overlay');
+const quotaTarget=document.getElementById('quota-target');
+const quotaCount=document.getElementById('quota-count');
 function openQuotaModal(t){
-  const has=t.weeklyTarget>0;
-  const hasCount=has&&weekDoneCount(t)>0;
-  openInputModal('设置每周次数','留空或 0 = 删除，恢复每天刷新',v=>{
-    v=v.trim();
-    const n=Number(v);
-    if(!v||n===0){delete t.weeklyTarget;t.doneLog=[];showToast('已恢复每天刷新');}
-    else{
-      if(n>0&&Number.isInteger(n)){t.weeklyTarget=n;t.doneLog=t.doneLog||[];}
-      else{showToast('请输入大于 0 的整数');return;}
-    }
-    save();render();
-  },hasCount?'清零本周计数':null,()=>{
-    t.doneLog=[];save();render();showToast('本周计数已清零');
-  },has?String(t.weeklyTarget):'');
+  quotaCtx=t;
+  quotaTarget.value=t.weeklyTarget>0?String(t.weeklyTarget):'';
+  quotaCount.value=String(weekDoneCount(t));
+  document.getElementById('quota-del').hidden=!(t.weeklyTarget>0);
+  quotaOverlay.classList.remove('hidden');
+  setTimeout(()=>quotaTarget.focus(),0);
 }
+function closeQuota(){quotaOverlay.classList.add('hidden');quotaCtx=null;}
+function submitQuota(){
+  const t=quotaCtx;
+  if(!t)return;
+  const tv=quotaTarget.value.trim();
+  const wk=periodKey('weekly');
+  if(!tv||Number(tv)===0){
+    delete t.weeklyTarget;t.doneLog=[];
+    save();render();closeQuota();showToast('已恢复每天刷新');
+    return;
+  }
+  const n=Number(tv);
+  if(!(n>0&&Number.isInteger(n))){showToast('每周次数请输入大于 0 的整数');return;}
+  t.weeklyTarget=n;
+  let c=Number(quotaCount.value);
+  if(!Number.isInteger(c)||c<0)c=0;
+  c=Math.min(c,n);
+  t.doneLog=c>0?Array(c).fill(wk):[];
+  save();render();closeQuota();
+}
+document.getElementById('quota-ok').addEventListener('click',()=>{submitQuota();});
+document.getElementById('quota-cancel').addEventListener('click',closeQuota);
+document.getElementById('quota-del').addEventListener('click',()=>{
+  const t=quotaCtx;if(!t)return;
+  delete t.weeklyTarget;t.doneLog=[];
+  save();render();closeQuota();showToast('已恢复每天刷新');
+});
+[quotaTarget,quotaCount].forEach(f=>f.addEventListener('keydown',e=>{
+  e.stopPropagation();
+  if(e.key==='Enter'){e.preventDefault();submitQuota();}
+}));
+quotaOverlay.addEventListener('click',e=>{if(e.target===quotaOverlay)closeQuota();});
+
 document.addEventListener('mousedown',e=>{
   if(groupMenu&&!groupMenu.contains(e.target)){closeGroupMenu();suppressOpen=true;}
   else suppressOpen=false;
@@ -871,22 +919,17 @@ confirmOverlay.addEventListener('click',e=>{if(e.target===confirmOverlay)closeCo
 /* ---------- 输入弹窗 ---------- */
 const inputOverlay=document.getElementById('input-overlay');
 const inputField=document.getElementById('input-field');
-let inputExtraCb=null;
-function openInputModal(label,placeholder,cb,extraLabel,extraCb,prefill){
+function openInputModal(label,placeholder,cb){
   document.getElementById('input-label').textContent=label;
-  inputField.value=prefill||'';inputField.placeholder=placeholder;
+  inputField.value='';inputField.placeholder=placeholder;
   inputCb=cb;
-  const extraBtn=document.getElementById('input-extra');
-  if(extraLabel){extraBtn.hidden=false;extraBtn.textContent=extraLabel;inputExtraCb=extraCb;}
-  else{extraBtn.hidden=true;inputExtraCb=null;}
   inputOverlay.classList.remove('hidden');
   setTimeout(()=>inputField.focus(),0);
 }
-function closeInput(){inputOverlay.classList.add('hidden');inputCb=null;inputExtraCb=null;}
+function closeInput(){inputOverlay.classList.add('hidden');inputCb=null;}
 function submitInput(){const v=inputField.value;const cb=inputCb;closeInput();if(cb)cb(v);}
 document.getElementById('input-ok').addEventListener('click',submitInput);
 document.getElementById('input-cancel').addEventListener('click',closeInput);
-document.getElementById('input-extra').addEventListener('click',()=>{const cb=inputExtraCb;closeInput();if(cb)cb();});
 inputOverlay.addEventListener('click',e=>{if(e.target===inputOverlay)closeInput();});
 inputField.addEventListener('keydown',e=>{
   e.stopPropagation();
@@ -898,6 +941,7 @@ document.addEventListener('keydown',e=>{
   if(!helpOverlay.classList.contains('hidden')){helpOverlay.classList.add('hidden');return;}
   if(!confirmOverlay.classList.contains('hidden')){closeConfirm();return;}
   if(!inputOverlay.classList.contains('hidden')){closeInput();return;}
+  if(!quotaOverlay.classList.contains('hidden')){closeQuota();return;}
   closeGroupMenu();
   closeTierMenu();
   closeSchemeMenu();

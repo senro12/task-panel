@@ -74,8 +74,8 @@ body{
 .task-list:empty{padding:0}
 .task{background:#f7f8fa;border:1px solid #eef0f4;border-radius:8px;padding:8px 10px;margin-bottom:8px;position:relative;overflow:hidden}
 .swipe-del{position:absolute;top:0;right:0;bottom:0;width:80px;background:var(--danger);color:#fff;display:none;align-items:center;justify-content:center;font-size:12px}
-.task.swiping .swipe-del{display:flex}
-.task-inner{transition:transform .18s ease}
+.task.swiping .swipe-del,.task.swipe-open .swipe-del{display:flex}
+.task-inner{position:relative;z-index:1;background:#f7f8fa;transition:transform .18s ease}
 .task.swiping .task-inner{transition:none}
 .task:hover{border-color:#dfe3ea}
 .task.dragging{opacity:.4}
@@ -1125,8 +1125,8 @@ document.addEventListener('touchmove',e=>{
         swipeCtx=swipePending;swipeCtx.active=true;
         swipeCtx.lastX=t.clientX;
         swipeCtx.dx=Math.max(-80,Math.min(0,dx));
-        swipeCtx.inner.style.transform='translateX('+swipeCtx.dx+'px)';
         swipeCtx.el.classList.add('swiping');
+        swipeCtx.inner.style.transform='translateX('+swipeCtx.dx+'px)';
         touchDrag=null;
       }else{touchDrag=null;}
     }
@@ -1142,8 +1142,12 @@ function onTouchEnd(e){
     for(const ct of e.changedTouches){if(ct.identifier===swipeCtx.identifier)ours=true;}
     if(ours){
       const s=swipeCtx;swipeCtx=null;
+      s.el.classList.remove('swiping');
+      s.el.classList.add('swipe-open');
       s.inner.style.transform='';
-      requestAnimationFrame(()=>s.el.classList.remove('swiping'));
+      const dropReveal=()=>s.el.classList.remove('swipe-open');
+      s.inner.addEventListener('transitionend',dropReveal,{once:true});
+      setTimeout(dropReveal,260);
       if(s.dx<=-60&&e.type!=='touchcancel'){
         openConfirm('删除任务「'+s.task.title+'」？','删除后无法恢复','删除',()=>{
           tasks=tasks.filter(x=>x.id!==s.task.id);save();render();

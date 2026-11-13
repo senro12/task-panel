@@ -98,8 +98,6 @@ body{
 .pill-opt:hover{background:#dbe9fe}
 .pill-other{background:#edf0f4;color:#8a93a3}
 .pill-other:hover{background:#e3e7ee}
-.pill-quota{background:#eef2ff;color:#6366f1}
-.pill-quota:hover{background:#e0e7ff}
 .pill-quota-done{background:#f1f3f6;color:#b8bfca}
 .pill-group{background:#eef2ff;color:#6366f1;max-width:96px;overflow:hidden;text-overflow:ellipsis}
 .pill-group:hover{background:#e0e7ff}
@@ -186,10 +184,6 @@ body{
   .tab-remain-monthly{background:#fdf3e0;color:#d97706}
   .tab-remain.zero{background:#f1f3f6;color:#b8bfca}
   .remain{display:none}
-  .pill-must,.pill-opt,.pill-other{font-size:0;line-height:0;padding:8px 10px}
-  .pill-must{background:#f2726f}
-  .pill-opt{background:#6da2f8}
-  .pill-other{background:#c5ccd6}
   .tab.active{color:var(--text);font-weight:600;background:#fff;border-radius:10px 10px 0 0}
   .tab.active::after{content:'';position:absolute;left:22%;right:22%;bottom:0;height:2px;border-radius:2px}
   .tab-daily.active::after{background:var(--blue)}
@@ -290,7 +284,7 @@ body{
         <li><b>删除</b>：点右侧 ×，确认后删除</li>
         <li><b>排序 / 移动</b>：按住任务拖到想要的位置；拖到其他面板即移动过去（手机长按半秒后拖动）</li>
         <li><b>优先级</b>：点击任务前的标签，在必做 / 选做 / 其他间选择</li>
-        <li><b>每周次数</b>：每日任务点标签菜单「设置每周次数」，设为 N 后每周完成 N 次即本周封版，下周一重新计数</li>
+        <li><b>每周次数</b>：每日任务点标签菜单「设置计数」，设为 N 后每周完成 N 次即本周封版，下周一重新计数</li>
         <li><b>分组（长期面板）</b>：点任务上的分组标签选择；面板顶部「＋分组」可新建</li>
         <li><b>方案</b>：点顶部方案名，可切换 / 新建 / 重命名 / 删除</li>
         <li><b>备份</b>：顶部「导出」生成备份文件，「导入」可恢复或迁移到其他设备</li>
@@ -315,7 +309,7 @@ body{
 
 <div class="modal-overlay hidden" id="quota-overlay">
   <div class="modal">
-    <p class="modal-text">设置每周次数</p>
+    <p class="modal-text">设置计数</p>
     <div class="quota-fields">
       <label class="quota-field"><span>每周次数</span><input type="text" id="quota-target" inputmode="numeric"></label>
       <label class="quota-field"><span>本周已计</span><input type="text" id="quota-count" inputmode="numeric"></label>
@@ -648,17 +642,17 @@ function taskEl(t){
   }else{
     const TIERS={must:['必做','pill-must'],opt:['选做','pill-opt'],other:['其他','pill-other']};
     const[tl,pc]=TIERS[t.priority]||TIERS.must;
-    const pp=pill(tl,pc);
-    pp.title='点击调整档位';
+    let pp;
+    if(t.board==='daily'&&t.weeklyTarget>0){
+      const cnt=weekDoneCount(t);
+      pp=pill(cnt+'/'+t.weeklyTarget,pc+(cnt>=t.weeklyTarget?' pill-quota-done':' pill-quota'));
+      pp.title='每周 '+t.weeklyTarget+' 次，点击调整';
+    }else{
+      pp=pill(tl,pc);
+      pp.title='点击调整档位';
+    }
     pp.addEventListener('click',e=>{e.stopPropagation();openTierMenu(t,pp);});
     head.appendChild(pp);
-  }
-  if(t.board==='daily'&&t.weeklyTarget>0){
-    const cnt=weekDoneCount(t);
-    const qb=pill(cnt+'/'+t.weeklyTarget,cnt>=t.weeklyTarget?'pill-quota-done':'pill-quota');
-    qb.title='每周 '+t.weeklyTarget+' 次，点击设置';
-    qb.addEventListener('click',e=>{e.stopPropagation();openQuotaModal(t);});
-    head.appendChild(qb);
   }
   const dimCls=t.priority==='opt'?' opt':(t.priority==='other'?' other':'');
   const title=el('div','t-title'+(isDone(t)?' done':'')+dimCls,t.title);
@@ -833,7 +827,7 @@ function openTierMenu(t,anchor){
   });
   if(t.board==='daily'){
     menu.appendChild(el('div','pop-divider'));
-    const qb=el('button','pop-item new','设置每周次数…');
+    const qb=el('button','pop-item new','设置计数…');
     qb.addEventListener('click',()=>{closeTierMenu();openQuotaModal(t);});
     menu.appendChild(qb);
   }

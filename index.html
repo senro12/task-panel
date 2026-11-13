@@ -153,8 +153,7 @@ body{
 .quota-field span{font-size:13px;color:var(--muted);flex-shrink:0;width:60px}
 .quota-field input{flex:1;min-width:0;border:1px solid var(--line);border-radius:8px;padding:7px 10px;font-size:13px;outline:none;font-family:inherit;background:#fff;color:var(--text)}
 .quota-field input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(59,130,246,.12)}
-.btn-text-danger{margin-right:auto;background:transparent;color:var(--danger);padding:7px 4px;font-size:13px}
-.btn-text-danger:hover{text-decoration:underline}
+#quota-del{margin-right:auto}
 .btn-primary{background:var(--blue);color:#fff}
 .btn-primary:hover{filter:brightness(1.08)}
 .help-modal{width:430px;max-width:92vw;max-height:80vh;display:flex;flex-direction:column;padding:0}
@@ -315,7 +314,7 @@ body{
     </div>
     <p class="modal-hint">每周次数留空或 0 = 删除设定，恢复每天刷新；本周已计可改，超过每周次数按满额处理</p>
     <div class="modal-actions">
-      <button class="btn-text-danger" id="quota-del" hidden>删除设定</button>
+      <button class="btn-danger" id="quota-del" hidden>删除设定</button>
       <button class="btn-cancel" id="quota-cancel">取消</button>
       <button class="btn-primary" id="quota-ok">确定</button>
     </div>

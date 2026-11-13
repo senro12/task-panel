@@ -148,6 +148,8 @@ body{
 .btn-cancel:hover{background:#e4e7ec}
 .btn-danger{background:var(--danger);color:#fff}
 .btn-danger:hover{filter:brightness(1.08)}
+.btn-text-danger{margin-right:auto;background:transparent;color:var(--danger);padding:7px 4px;font-size:13px}
+.btn-text-danger:hover{text-decoration:underline}
 .btn-primary{background:var(--blue);color:#fff}
 .btn-primary:hover{filter:brightness(1.08)}
 .help-modal{width:430px;max-width:92vw;max-height:80vh;display:flex;flex-direction:column;padding:0}
@@ -316,6 +318,7 @@ body{
     <p class="modal-text" id="input-label">新建分组</p>
     <input type="text" class="modal-input" id="input-field" placeholder="输入分组名称">
     <div class="modal-actions">
+      <button class="btn-text-danger" id="input-extra" hidden>清零本周计数</button>
       <button class="btn-cancel" id="input-cancel">取消</button>
       <button class="btn-primary" id="input-ok">确定</button>
     </div>
@@ -825,16 +828,20 @@ function changeTier(t,newPriority){
   save();render();
 }
 function openQuotaModal(t){
-  openInputModal('设置每周次数','输入每周次数，清空恢复每天刷新',v=>{
+  const has=t.weeklyTarget>0;
+  const hasCount=has&&weekDoneCount(t)>0;
+  openInputModal('设置每周次数','留空或 0 = 删除，恢复每天刷新',v=>{
     v=v.trim();
-    if(!v){delete t.weeklyTarget;t.doneLog=[];}
+    const n=Number(v);
+    if(!v||n===0){delete t.weeklyTarget;t.doneLog=[];showToast('已恢复每天刷新');}
     else{
-      const n=parseInt(v,10);
-      if(n>0){t.weeklyTarget=n;t.doneLog=t.doneLog||[];}
-      else{showToast('请输入大于 0 的数字');return;}
+      if(n>0&&Number.isInteger(n)){t.weeklyTarget=n;t.doneLog=t.doneLog||[];}
+      else{showToast('请输入大于 0 的整数');return;}
     }
     save();render();
-  });
+  },hasCount?'清零本周计数':null,()=>{
+    t.doneLog=[];save();render();showToast('本周计数已清零');
+  },has?String(t.weeklyTarget):'');
 }
 document.addEventListener('mousedown',e=>{
   if(groupMenu&&!groupMenu.contains(e.target)){closeGroupMenu();suppressOpen=true;}
@@ -864,17 +871,22 @@ confirmOverlay.addEventListener('click',e=>{if(e.target===confirmOverlay)closeCo
 /* ---------- 输入弹窗 ---------- */
 const inputOverlay=document.getElementById('input-overlay');
 const inputField=document.getElementById('input-field');
-function openInputModal(label,placeholder,cb){
+let inputExtraCb=null;
+function openInputModal(label,placeholder,cb,extraLabel,extraCb,prefill){
   document.getElementById('input-label').textContent=label;
-  inputField.value='';inputField.placeholder=placeholder;
+  inputField.value=prefill||'';inputField.placeholder=placeholder;
   inputCb=cb;
+  const extraBtn=document.getElementById('input-extra');
+  if(extraLabel){extraBtn.hidden=false;extraBtn.textContent=extraLabel;inputExtraCb=extraCb;}
+  else{extraBtn.hidden=true;inputExtraCb=null;}
   inputOverlay.classList.remove('hidden');
   setTimeout(()=>inputField.focus(),0);
 }
-function closeInput(){inputOverlay.classList.add('hidden');inputCb=null;}
+function closeInput(){inputOverlay.classList.add('hidden');inputCb=null;inputExtraCb=null;}
 function submitInput(){const v=inputField.value;const cb=inputCb;closeInput();if(cb)cb(v);}
 document.getElementById('input-ok').addEventListener('click',submitInput);
 document.getElementById('input-cancel').addEventListener('click',closeInput);
+document.getElementById('input-extra').addEventListener('click',()=>{const cb=inputExtraCb;closeInput();if(cb)cb();});
 inputOverlay.addEventListener('click',e=>{if(e.target===inputOverlay)closeInput();});
 inputField.addEventListener('keydown',e=>{
   e.stopPropagation();

@@ -14,17 +14,29 @@
   h1{margin:0;font-size:22px;display:flex;align-items:center;gap:10px;}
   h1::before{content:"";width:6px;height:22px;border-radius:3px;background:linear-gradient(#203864,#595959);}
   .scheme-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
-  .scheme-name{font-weight:600;color:#334155;font-size:14px;}
-  .scheme-name.v:hover{background:rgba(59,130,246,.10);box-shadow:0 0 0 1px #93c5fd inset;}
-  .scheme-name.v:focus{background:#fff;box-shadow:0 0 0 2px #3b82f6;}
+  .scheme-name{flex:1;display:flex;align-items:center;padding:6px 10px;font-size:13px;
+               font-weight:600;color:#334155;min-width:0;white-space:nowrap;overflow:hidden;
+               text-overflow:ellipsis;cursor:text;}
+  .scheme-name:hover{background:rgba(59,130,246,.08);}
+  .scheme-name:focus{background:#fff;box-shadow:inset 0 0 0 2px #3b82f6;}
   .btn{background:#fff;border:1px solid #cbd5e1;border-radius:6px;padding:6px 12px;
        cursor:pointer;font:13px "PingFang SC","Microsoft YaHei",sans-serif;color:#374151;
        transition:background .12s;}
   .btn:hover{background:#f1f5f9;}
   .btn.danger{color:#b91c1c;border-color:#fca5a5;}
   .btn.danger:hover{background:#fef2f2;}
-  #scheme-select{width:200px;padding:6px 10px;border:1px solid #cbd5e1;border-radius:6px;
-                 font:13px "PingFang SC","Microsoft YaHei",sans-serif;color:#111827;background:#fff;}
+  .scheme-combo{display:inline-flex;align-items:stretch;width:220px;background:#fff;
+                border:1px solid #cbd5e1;border-radius:6px;overflow:hidden;}
+  .scheme-toggle{width:28px;border:none;border-left:1px solid #e5e9ef;background:transparent;
+                 cursor:pointer;color:#6b7280;font-size:11px;padding:0;}
+  .scheme-toggle:hover{background:#f1f5f9;}
+  .scheme-popup{position:fixed;display:none;background:#fff;border:1px solid #cbd5e1;
+                border-radius:8px;box-shadow:0 10px 28px rgba(15,23,42,.18);z-index:60;
+                min-width:220px;max-height:240px;overflow:auto;padding:4px 0;}
+  .scheme-popup.open{display:block;}
+  .scheme-option{padding:8px 12px;font-size:13px;color:#111827;cursor:pointer;white-space:nowrap;}
+  .scheme-option:hover{background:#f1f5f9;}
+  .scheme-option.active{background:#eef2ff;color:#1d4ed8;font-weight:600;}
   .ops{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px;}
   .btn.primary{background:#203864;border-color:#203864;color:#fff;}
   .btn.primary:hover{background:#2b4a7c;}
@@ -77,10 +89,12 @@
   <div class="title-row">
     <h1>方案</h1>
     <div class="scheme-bar">
-      <select id="scheme-select"></select>
+      <div class="scheme-combo" id="scheme-combo">
+        <span id="scheme-name" class="scheme-name v" contenteditable spellcheck="false"></span>
+        <button class="scheme-toggle" id="scheme-toggle" type="button" title="切换方案">▾</button>
+      </div>
       <button class="btn" id="btn-add">＋ 新增</button>
       <button class="btn danger" id="btn-del">删除</button>
-      <span id="scheme-name" class="scheme-name v" contenteditable spellcheck="false"></span>
     </div>
   </div>
   <div class="ops">
@@ -118,6 +132,7 @@
     </div>
   </div>
 </div>
+<div id="scheme-popup"></div>
 <script>
 (function(){
   var SCHEME_KEY = 'fangan-data-v4';
@@ -220,16 +235,9 @@
     saveStore();
   }
   function refreshSchemeBar(){
-    var sel = document.getElementById('scheme-select');
-    sel.innerHTML = '';
-    schemes.forEach(function(s){
-      var o = document.createElement('option');
-      o.value = s.id; o.textContent = s.name;
-      if(s.id === currentId) o.selected = true;
-      sel.appendChild(o);
-    });
     var s = current();
-    document.getElementById('scheme-name').textContent = s ? s.name : '';
+    var nameEl = document.getElementById('scheme-name');
+    if(nameEl && document.activeElement !== nameEl) nameEl.textContent = s ? s.name : '';
   }
   function initPrev(){
     for(var c=2;c<=9;c++) prevSrc[c] = rawText(8,c);
@@ -279,8 +287,6 @@
     compute();
     saveCurrent();
   }
-  var schemeSel = document.getElementById('scheme-select');
-  schemeSel.addEventListener('change', function(){ switchScheme(schemeSel.value); });
   document.getElementById('btn-add').addEventListener('click', function(){
     var n = schemes.length + 1, name = '方案' + n;
     var names = schemes.map(function(s){ return s.name; });
@@ -296,8 +302,6 @@
     var s = current(); if(!s) return;
     var name = nameEl.textContent.trim();
     s.name = name;
-    var sel = document.getElementById('scheme-select');
-    if(sel.selectedOptions[0]) sel.selectedOptions[0].textContent = name;
     saveStore();
   });
   nameEl.addEventListener('blur', function(){
@@ -310,6 +314,43 @@
   nameEl.addEventListener('keydown', function(e){
     if(e.key === 'Enter'){ e.preventDefault(); nameEl.blur(); }
   });
+  var schemeCombo = document.getElementById('scheme-combo');
+  var schemeToggle = document.getElementById('scheme-toggle');
+  var schemePopup = document.getElementById('scheme-popup');
+  function closeSchemePopup(){ schemePopup.classList.remove('open'); }
+  function openSchemePopup(){
+    schemePopup.innerHTML = '';
+    schemes.forEach(function(s){
+      var row = document.createElement('div');
+      row.className = 'scheme-option' + (s.id === currentId ? ' active' : '');
+      row.dataset.id = s.id;
+      row.textContent = s.name;
+      schemePopup.appendChild(row);
+    });
+    var rect = schemeCombo.getBoundingClientRect();
+    schemePopup.style.minWidth = rect.width + 'px';
+    schemePopup.style.left = rect.left + 'px';
+    schemePopup.style.top = (rect.bottom + 4) + 'px';
+    schemePopup.classList.add('open');
+  }
+  schemeToggle.addEventListener('click', function(e){
+    e.stopPropagation();
+    if(schemePopup.classList.contains('open')) closeSchemePopup();
+    else openSchemePopup();
+  });
+  schemePopup.addEventListener('click', function(e){
+    var row = e.target.closest('.scheme-option'); if(!row) return;
+    closeSchemePopup();
+    switchScheme(row.dataset.id);
+  });
+  document.addEventListener('mousedown', function(e){
+    if(!schemePopup.classList.contains('open')) return;
+    if(schemePopup.contains(e.target)) return;
+    if(schemeCombo.contains(e.target)) return;
+    closeSchemePopup();
+  });
+  window.addEventListener('scroll', closeSchemePopup, true);
+  document.addEventListener('keydown', function(e){ if(e.key === 'Escape') closeSchemePopup(); });
   var delBtn = document.getElementById('btn-del');
   delBtn.addEventListener('click', function(){
     if(delBtn.dataset.confirming !== '1'){

@@ -6,14 +6,31 @@
 <title>方案</title>
 <style>
   *{box-sizing:border-box}
-  body{margin:0;padding:36px 20px 50px;background:#f3f5f8;color:#1f2937;
+  body{margin:0;padding:28px 20px 50px;background:#f3f5f8;color:#1f2937;
        font-family:"PingFang SC","Microsoft YaHei","DengXian","等线",-apple-system,"Segoe UI",sans-serif;
        -webkit-font-smoothing:antialiased;}
   .page{max-width:1200px;margin:0 auto;}
-  h1{margin:0 0 6px;font-size:22px;display:flex;align-items:center;gap:10px;}
+  .title-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:14px;}
+  h1{margin:0;font-size:22px;display:flex;align-items:center;gap:10px;}
   h1::before{content:"";width:6px;height:22px;border-radius:3px;background:linear-gradient(#203864,#595959);}
-  .sub{margin:0 0 22px;color:#6b7280;font-size:13px;}
-  .sub b{color:#217346;font-weight:600;}
+  .scheme-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .bar-label{font-size:13px;color:#6b7280;}
+  .scheme-name{font-weight:600;color:#334155;font-size:14px;}
+  .btn{background:#fff;border:1px solid #cbd5e1;border-radius:6px;padding:6px 12px;
+       cursor:pointer;font:13px "PingFang SC","Microsoft YaHei",sans-serif;color:#374151;
+       transition:background .12s;}
+  .btn:hover{background:#f1f5f9;}
+  .btn.danger{color:#b91c1c;border-color:#fca5a5;}
+  .btn.danger:hover{background:#fef2f2;}
+  #scheme-select{padding:6px 10px;border:1px solid #cbd5e1;border-radius:6px;font:13px
+                 "PingFang SC","Microsoft YaHei",sans-serif;color:#111827;background:#fff;}
+  .rename-form{display:none;gap:6px;align-items:center;}
+  .rename-form.show{display:inline-flex;}
+  #rename-input{padding:5px 10px;border:1px solid #93c5fd;border-radius:6px;font:13px inherit;font-family:inherit;}
+  .ops{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px;}
+  .btn.primary{background:#203864;border-color:#203864;color:#fff;}
+  .btn.primary:hover{background:#2b4a7c;}
+  .hint{font-size:12px;color:#9ca3af;}
   table{width:100%;table-layout:fixed;border-collapse:collapse;font-size:14px;background:#fff;}
   th,td{border-right:1px solid #c5cdd6;border-bottom:1px solid #c5cdd6;
         text-align:center;vertical-align:middle;height:42px;padding:8px 6px;}
@@ -25,7 +42,8 @@
   tr.row-gray td{background:#f6f8fa;}
   tr.row-white td{background:#fff;}
   tr.row-src td{background:#203864;color:#fff;font-weight:600;}
-  tr td.dg{background:#595959;color:#fff;font-weight:600;}
+  td.dg{background:#595959;color:#fff;font-weight:600;}
+  th.black,td.black{background:#000 !important;}
   th.center,td.center{text-align:center;vertical-align:middle;}
   .v{display:inline-block;min-width:1.5em;min-height:1.3em;padding:1px 5px;border-radius:4px;
      outline:none;cursor:text;transition:background .12s,box-shadow .12s;}
@@ -46,28 +64,68 @@
              font-variant-numeric:tabular-nums;}
   select.cell-select{position:absolute;inset:0;width:100%;height:100%;opacity:0;
                      border:none;cursor:pointer;font:inherit;padding:0;}
+  .note-mod{margin-top:20px;}
+  .mod-title{font-weight:600;font-size:14px;color:#1f2937;margin-bottom:8px;}
+  #note{width:100%;min-height:90px;border:1px solid #cbd5e1;border-radius:8px;
+        padding:10px 12px;font:14px "PingFang SC","Microsoft YaHei",sans-serif;
+        color:#1f2937;resize:vertical;outline:none;background:#fff;}
+  #note:focus{border-color:#3b82f6;}
+  .desc-mod{margin-top:16px;}
+  .desc-text{background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:12px 14px;
+             font-size:13px;color:#4b5563;line-height:1.7;}
+  .desc-text b{color:#1f2937;}
 </style>
 </head>
 <body>
 <div class="page">
-  <h1>方案</h1>
-  <p class="sub">主表数据格（第 2～9 列）<b>点击即弹出下拉选择</b>（选项 = 第八行“总计”右侧的非“--”内容，第八行改名后选项与已选内容自动同步；未选择的格子显示[空]）；<b>第 10 行</b>自动统计每个名称出现的次数，<b>第 9 行第 1 格</b>为第 9 行数字之和；第一列深灰格文字可直接编辑；<b>数据自动保存在本浏览器</b>（刷新/重开/页面更新都不丢，每人各自一份，不写回任何文件）</p>
+  <div class="title-row">
+    <h1>方案</h1>
+    <div class="scheme-bar">
+      <span class="bar-label">方案：</span>
+      <select id="scheme-select"></select>
+      <button class="btn" id="btn-add">＋ 新增</button>
+      <button class="btn" id="btn-rename">改名</button>
+      <button class="btn danger" id="btn-del">删除</button>
+      <span id="rename-form" class="rename-form">
+        <input id="rename-input" placeholder="输入新名称">
+        <button class="btn" id="rename-ok">确定</button>
+        <button class="btn" id="rename-cancel">取消</button>
+      </span>
+      <span id="scheme-name" class="scheme-name"></span>
+    </div>
+  </div>
+  <div class="ops">
+    <button class="btn primary" id="btn-reset-part">重置部分</button>
+    <button class="btn primary" id="btn-reset-all">重置全部</button>
+    <span class="hint">重置部分＝清空第 2～9 列第 2～7 行；重置全部＝清空第 2～9 列第 2～9 行（含第八行名称恢复为“--”）</span>
+  </div>
   <table class="main-table">
-<thead><tr class="row-hd"><th class="center"><span class="v" contenteditable spellcheck="false" data-rc="1,1">位置</span></th><th class="center"><span class="v" contenteditable spellcheck="false" data-rc="1,2">名称1</span></th><th class="center"><span class="v" contenteditable spellcheck="false" data-rc="1,3">名称2</span></th><th class="center"><span class="v" contenteditable spellcheck="false" data-rc="1,4">名称3</span></th><th class="center"><span class="v" contenteditable spellcheck="false" data-rc="1,5">名称4</span></th><th class="center"><span class="v" contenteditable spellcheck="false" data-rc="1,6">名称5</span></th><th class="center"><span class="v" contenteditable spellcheck="false" data-rc="1,7">名称6</span></th><th class="center"><span class="v" contenteditable spellcheck="false" data-rc="1,8">名称7</span></th><th class="center"><span class="v" contenteditable spellcheck="false" data-rc="1,9">名称8</span></th></tr></thead>
+<thead><tr class="row-hd"><th class="center black"><span class="v" contenteditable spellcheck="false" data-rc="1,1">位置</span></th><th class="center"><span class="v" contenteditable spellcheck="false" data-rc="1,2">名称1</span></th><th class="center"><span class="v" contenteditable spellcheck="false" data-rc="1,3">名称2</span></th><th class="center"><span class="v" contenteditable spellcheck="false" data-rc="1,4">名称3</span></th><th class="center"><span class="v" contenteditable spellcheck="false" data-rc="1,5">名称4</span></th><th class="center"><span class="v" contenteditable spellcheck="false" data-rc="1,6">名称5</span></th><th class="center"><span class="v" contenteditable spellcheck="false" data-rc="1,7">名称6</span></th><th class="center"><span class="v" contenteditable spellcheck="false" data-rc="1,8">名称7</span></th><th class="center"><span class="v" contenteditable spellcheck="false" data-rc="1,9">名称8</span></th></tr></thead>
 <tr class="row-gray"><td class="dg center"><span class="v" contenteditable spellcheck="false" data-rc="2,1"></span></td><td class="data-cell"><span class="cell-text" data-cur="2,2"></span><select class="cell-select" data-rc="2,2"><option value="">[空]</option></select></td><td class="data-cell"><span class="cell-text" data-cur="2,3"></span><select class="cell-select" data-rc="2,3"><option value="">[空]</option></select></td><td class="data-cell"><span class="cell-text" data-cur="2,4"></span><select class="cell-select" data-rc="2,4"><option value="">[空]</option></select></td><td class="data-cell"><span class="cell-text" data-cur="2,5"></span><select class="cell-select" data-rc="2,5"><option value="">[空]</option></select></td><td class="data-cell"><span class="cell-text" data-cur="2,6"></span><select class="cell-select" data-rc="2,6"><option value="">[空]</option></select></td><td class="data-cell"><span class="cell-text" data-cur="2,7"></span><select class="cell-select" data-rc="2,7"><option value="">[空]</option></select></td><td class="data-cell"><span class="cell-text" data-cur="2,8"></span><select class="cell-select" data-rc="2,8"><option value="">[空]</option></select></td><td class="data-cell"><span class="cell-text" data-cur="2,9"></span><select class="cell-select" data-rc="2,9"><option value="">[空]</option></select></td></tr>
 <tr class="row-white"><td class="dg center"><span class="v" contenteditable spellcheck="false" data-rc="3,1"></span></td><td class="data-cell"><span class="cell-text" data-cur="3,2"></span><select class="cell-select" data-rc="3,2"><option value="">[空]</option></select></td><td class="data-cell"><span class="cell-text" data-cur="3,3"></span><select class="cell-select" data-rc="3,3"><option value="">[空]</option></select></td><td class="data-cell"><span class="cell-text" data-cur="3,4"></span><select class="cell-select" data-rc="3,4"><option value="">[空]</option></select></td><td class="data-cell"><span class="cell-text" data-cur="3,5"></span><select class="cell-select" data-rc="3,5"><option value="">[空]</option></select></td><td class="data-cell"><span class="cell-text" data-cur="3,6"></span><select class="cell-select" data-rc="3,6"><option value="">[空]</option></select></td><td class="data-cell"><span class="cell-text" data-cur="3,7"></span><select class="cell-select" data-rc="3,7"><option value="">[空]</option></select></td><td class="data-cell"><span class="cell-text" data-cur="3,8"></span><select class="cell-select" data-rc="3,8"><option value="">[空]</option></select></td><td class="data-cell"><span class="cell-text" data-cur="3,9"></span><select class="cell-select" data-rc="3,9"><option value="">[空]</option></select></td></tr>
 <tr class="row-white"><td class="dg center"><span class="v" contenteditable spellcheck="false" data-rc="4,1"></span></td><td class="data-cell"><span class="cell-text" data-cur="4,2"></span><select class="cell-select" data-rc="4,2"><option value="">[空]</option></select></td><td class="data-cell"><span class="cell-text" data-cur="4,3"></span><select class="cell-select" data-rc="4,3"><option value="">[空]</option></select></td><td class="data-cell"><span class="cell-text" data-cur="4,4"></span><select class="cell-select" data-rc="4,4"><option value="">[空]</option></select></td><td class="data-cell"><span class="cell-text" data-cur="4,5"></span><select class="cell-select" data-rc="4,5"><option value="">[空]</option></select></td><td class="data-cell"><span class="cell-text" data-cur="4,6"></span><select class="cell-select" data-rc="4,6"><option value="">[空]</option></select></td><td class="data-cell"><span class="cell-text" data-cur="4,7"></span><select class="cell-select" data-rc="4,7"><option value="">[空]</option></select></td><td class="data-cell"><span class="cell-text" data-cur="4,8"></span><select class="cell-select" data-rc="4,8"><option value="">[空]</option></select></td><td class="data-cell"><span class="cell-text" data-cur="4,9"></span><select class="cell-select" data-rc="4,9"><option value="">[空]</option></select></td></tr>
 <tr class="row-white"><td class="dg center"><span class="v" contenteditable spellcheck="false" data-rc="5,1"></span></td><td class="data-cell"><span class="cell-text" data-cur="5,2"></span><select class="cell-select" data-rc="5,2"><option value="">[空]</option></select></td><td class="data-cell"><span class="cell-text" data-cur="5,3"></span><select class="cell-select" data-rc="5,3"><option value="">[空]</option></select></td><td class="data-cell"><span class="cell-text" data-cur="5,4"></span><select class="cell-select" data-rc="5,4"><option value="">[空]</option></select></td><td class="data-cell"><span class="cell-text" data-cur="5,5"></span><select class="cell-select" data-rc="5,5"><option value="">[空]</option></select></td><td class="data-cell"><span class="cell-text" data-cur="5,6"></span><select class="cell-select" data-rc="5,6"><option value="">[空]</option></select></td><td class="data-cell"><span class="cell-text" data-cur="5,7"></span><select class="cell-select" data-rc="5,7"><option value="">[空]</option></select></td><td class="data-cell"><span class="cell-text" data-cur="5,8"></span><select class="cell-select" data-rc="5,8"><option value="">[空]</option></select></td><td class="data-cell"><span class="cell-text" data-cur="5,9"></span><select class="cell-select" data-rc="5,9"><option value="">[空]</option></select></td></tr>
 <tr class="row-white"><td class="dg center"><span class="v" contenteditable spellcheck="false" data-rc="6,1"></span></td><td class="data-cell"><span class="cell-text" data-cur="6,2"></span><select class="cell-select" data-rc="6,2"><option value="">[空]</option></select></td><td class="data-cell"><span class="cell-text" data-cur="6,3"></span><select class="cell-select" data-rc="6,3"><option value="">[空]</option></select></td><td class="data-cell"><span class="cell-text" data-cur="6,4"></span><select class="cell-select" data-rc="6,4"><option value="">[空]</option></select></td><td class="data-cell"><span class="cell-text" data-cur="6,5"></span><select class="cell-select" data-rc="6,5"><option value="">[空]</option></select></td><td class="data-cell"><span class="cell-text" data-cur="6,6"></span><select class="cell-select" data-rc="6,6"><option value="">[空]</option></select></td><td class="data-cell"><span class="cell-text" data-cur="6,7"></span><select class="cell-select" data-rc="6,7"><option value="">[空]</option></select></td><td class="data-cell"><span class="cell-text" data-cur="6,8"></span><select class="cell-select" data-rc="6,8"><option value="">[空]</option></select></td><td class="data-cell"><span class="cell-text" data-cur="6,9"></span><select class="cell-select" data-rc="6,9"><option value="">[空]</option></select></td></tr>
 <tr class="row-gray"><td class="dg center"><span class="v" contenteditable spellcheck="false" data-rc="7,1"></span></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
-<tr class="row-src"><td class="center"><span class="v" contenteditable spellcheck="false" data-rc="8,1">总计</span></td><td class="center"><span class="v" contenteditable spellcheck="false" data-rc="8,2">--</span></td><td class="center"><span class="v" contenteditable spellcheck="false" data-rc="8,3">--</span></td><td class="center"><span class="v" contenteditable spellcheck="false" data-rc="8,4">--</span></td><td class="center"><span class="v" contenteditable spellcheck="false" data-rc="8,5">--</span></td><td class="center"><span class="v" contenteditable spellcheck="false" data-rc="8,6">--</span></td><td class="center"><span class="v" contenteditable spellcheck="false" data-rc="8,7">--</span></td><td class="center"><span class="v" contenteditable spellcheck="false" data-rc="8,8">--</span></td><td class="center"><span class="v" contenteditable spellcheck="false" data-rc="8,9">--</span></td></tr>
+<tr class="row-src"><td class="center black"><span class="v" contenteditable spellcheck="false" data-rc="8,1">总计</span></td><td class="center"><span class="v" contenteditable spellcheck="false" data-rc="8,2">--</span></td><td class="center"><span class="v" contenteditable spellcheck="false" data-rc="8,3">--</span></td><td class="center"><span class="v" contenteditable spellcheck="false" data-rc="8,4">--</span></td><td class="center"><span class="v" contenteditable spellcheck="false" data-rc="8,5">--</span></td><td class="center"><span class="v" contenteditable spellcheck="false" data-rc="8,6">--</span></td><td class="center"><span class="v" contenteditable spellcheck="false" data-rc="8,7">--</span></td><td class="center"><span class="v" contenteditable spellcheck="false" data-rc="8,8">--</span></td><td class="center"><span class="v" contenteditable spellcheck="false" data-rc="8,9">--</span></td></tr>
 <tr class="row-gray"><td class="dg center"><span class="v computed" data-rc="9,1"></span></td><td class="center"><span class="v" contenteditable spellcheck="false" data-rc="9,2"></span></td><td class="center"><span class="v" contenteditable spellcheck="false" data-rc="9,3"></span></td><td class="center"><span class="v" contenteditable spellcheck="false" data-rc="9,4"></span></td><td class="center"><span class="v" contenteditable spellcheck="false" data-rc="9,5"></span></td><td class="center"><span class="v" contenteditable spellcheck="false" data-rc="9,6"></span></td><td class="center"><span class="v" contenteditable spellcheck="false" data-rc="9,7"></span></td><td class="center"><span class="v" contenteditable spellcheck="false" data-rc="9,8"></span></td><td class="center"><span class="v" contenteditable spellcheck="false" data-rc="9,9"></span></td></tr>
 <tr class="row-white"><td class="dg center"><span class="v computed" data-rc="10,1"></span></td><td class="center"><span class="v computed" data-rc="10,2"></span></td><td class="center"><span class="v computed" data-rc="10,3"></span></td><td class="center"><span class="v computed" data-rc="10,4"></span></td><td class="center"><span class="v computed" data-rc="10,5"></span></td><td class="center"><span class="v computed" data-rc="10,6"></span></td><td class="center"><span class="v computed" data-rc="10,7"></span></td><td class="center"><span class="v computed" data-rc="10,8"></span></td><td class="center"><span class="v computed" data-rc="10,9"></span></td></tr>
   </table>
+  <div class="note-mod">
+    <div class="mod-title">备注</div>
+    <textarea id="note" placeholder="在此输入备注…（随当前方案自动保存）"></textarea>
+  </div>
+  <div class="desc-mod">
+    <div class="mod-title">说明</div>
+    <div class="desc-text">
+      主表数据格（第 2～9 列）<b>点击即弹出下拉选择</b>：选项 = 第八行“总计”右侧的非“--”内容，第八行改名后选项与已选内容自动同步（未选择的格子在下拉列表中显示[空]，单元格内显示为空白）；<b>第 10 行</b>自动统计每个名称在第 2～6 行数据中出现的次数（0 不显示），<b>第 9 行第 1 格</b>为第 9 行数字之和；第一列深灰格文字可直接编辑。<b>数据自动保存在本浏览器</b>（刷新/重开/页面更新都不丢，每人各自一份，不写回任何文件）；多方案之间数据相互独立，可随时切换、新增、改名、删除。
+    </div>
+  </div>
 </div>
 <script>
 (function(){
-  var STORE_KEY = 'fangan-data-v3';
+  var SCHEME_KEY = 'fangan-data-v4';
+  var OLD_KEY = 'fangan-data-v3';
   var grid = {};
   document.querySelectorAll('[data-rc]').forEach(function(el){ grid[el.dataset.rc] = el; });
   function cellText(el){
@@ -83,18 +141,46 @@
     var el = grid[r+','+c]; if(el) el.textContent = (v === 0 ? '' : String(v));
   }
   function rawText(r,c){ return cellText(grid[r+','+c]); }
-  function saveData(){
-    try{
-      var data = {};
-      document.querySelectorAll('[data-rc]').forEach(function(el){
-        data[el.dataset.rc] = cellText(el);
-      });
-      localStorage.setItem(STORE_KEY, JSON.stringify(data));
-    }catch(err){}
+  function defaultData(){
+    var d = {};
+    d['1,1'] = '位置';
+    for(var c=2;c<=9;c++) d['1,'+c] = '名称' + (c-1);
+    d['8,1'] = '总计';
+    for(var c=2;c<=9;c++) d['8,'+c] = '--';
+    return d;
   }
-  function syncDisplay(s){
-    var sp = s.parentElement.querySelector('.cell-text');
-    if(sp) sp.textContent = s.value || '[空]';       // 空状态显示 [空]
+  var schemes = [], currentId = null, prevSrc = {};
+  function current(){
+    for(var i=0;i<schemes.length;i++) if(schemes[i].id === currentId) return schemes[i];
+    return null;
+  }
+  function loadStore(){
+    try{ return JSON.parse(localStorage.getItem(SCHEME_KEY)); }catch(e){ return null; }
+  }
+  function saveStore(){
+    try{ localStorage.setItem(SCHEME_KEY, JSON.stringify({schemes: schemes, current: currentId})); }catch(e){}
+  }
+  function collect(){
+    var data = {};
+    document.querySelectorAll('[data-rc]').forEach(function(el){ data[el.dataset.rc] = cellText(el); });
+    return data;
+  }
+  function applyData(data){
+    Object.keys(data).forEach(function(rc){
+      var el = grid[rc]; if(!el || el.classList.contains('computed')) return;
+      var v = data[rc] || '';
+      if(el.tagName === 'SELECT'){
+        if(v !== '' && !el.querySelector('option[value="' + v + '"]')){
+          var o = document.createElement('option');
+          o.value = v; o.textContent = v; el.appendChild(o);
+        }
+        el.value = v;
+        var sp = el.parentElement.querySelector('.cell-text');
+        if(sp) sp.textContent = v;        // 空显示为空白，[空] 只在下拉列表里
+      } else {
+        el.textContent = v;
+      }
+    });
   }
   function rebuildOptions(){
     var opts = [];
@@ -109,29 +195,61 @@
       if(cur !== '' && opts.indexOf(cur) !== -1) s.value = cur;
     });
   }
-  function restoreData(){
-    var data = null;
-    try{
-      var raw = localStorage.getItem(STORE_KEY);
-      data = raw ? JSON.parse(raw) : null;
-    }catch(err){ return; }
-    if(!data) return;
-    Object.keys(data).forEach(function(rc){
-      var el = grid[rc]; if(!el || el.classList.contains('computed')) return;
-      var v = data[rc] || '';
-      if(el.tagName === 'SELECT'){
-        if(v !== '' && !el.querySelector('option[value="' + v + '"]')){
-          var o = document.createElement('option');
-          o.value = v; o.textContent = v; el.appendChild(o);
+  function compute(){
+    var counts = [];
+    for(var c=2;c<=9;c++){
+      var label = rawText(8,c).toLowerCase();
+      var cnt = 0;
+      if(label !== '' && label !== '--'){
+        for(var r=2;r<=6;r++) for(var cc=2;cc<=9;cc++){
+          var t = rawText(r,cc).toLowerCase();
+          if(t !== '' && t === label) cnt++;
         }
-        el.value = v;
-        syncDisplay(el);
-      } else {
-        el.textContent = v;
       }
-    });
+      counts.push(cnt);
+      setDisp(10,c,cnt);
+    }
+    var sum9 = 0;
+    for(var c=2;c<=9;c++){ var n = val(9,c); if(n!==null) sum9 += n; }
+    setDisp(9,1,sum9);
+    var sum10 = 0;
+    for(var i=0;i<counts.length;i++) sum10 += counts[i];
+    setDisp(10,1,sum10);
   }
-  var prevSrc = {};
+  var noteEl = document.getElementById('note');
+  function saveCurrent(){
+    var s = current(); if(!s) return;
+    s.data = collect();
+    if(noteEl) s.note = noteEl.value;
+    saveStore();
+  }
+  function refreshSchemeBar(){
+    var sel = document.getElementById('scheme-select');
+    sel.innerHTML = '';
+    schemes.forEach(function(s){
+      var o = document.createElement('option');
+      o.value = s.id; o.textContent = s.name;
+      if(s.id === currentId) o.selected = true;
+      sel.appendChild(o);
+    });
+    var s = current();
+    document.getElementById('scheme-name').textContent = s ? s.name : '';
+  }
+  function initPrev(){
+    for(var c=2;c<=9;c++) prevSrc[c] = rawText(8,c);
+  }
+  function switchScheme(id){
+    saveCurrent();
+    currentId = id;
+    var s = current();
+    applyData(s ? s.data : defaultData());
+    if(noteEl) noteEl.value = s ? (s.note || '') : '';
+    initPrev();
+    rebuildOptions();
+    compute();
+    refreshSchemeBar();
+    saveStore();
+  }
   function syncRename(el){
     var rc = el.dataset && el.dataset.rc; if(!rc) return;
     var parts = rc.split(',');
@@ -150,42 +268,106 @@
     }
     prevSrc[c] = newName;
   }
-  function compute(){
-    // 第 10 行第 c 格：第八行第 c 格标签在第 2～9 列第 2～6 行数据中出现的次数
-    var counts = [];
-    for(var c=2;c<=9;c++){
-      var label = rawText(8,c).toLowerCase();
-      var cnt = 0;
-      if(label !== '' && label !== '--'){
-        for(var r=2;r<=6;r++) for(var cc=2;cc<=9;cc++){
-          var t = rawText(r,cc).toLowerCase();
-          if(t !== '' && t === label) cnt++;
-        }
+  function resetCells(rowMax){
+    for(var r=2;r<=rowMax;r++) for(var c=2;c<=9;c++){
+      var el = grid[r+','+c]; if(!el) continue;
+      if(el.tagName === 'SELECT'){
+        el.value = '';
+        var sp = el.parentElement.querySelector('.cell-text'); if(sp) sp.textContent = '';
+      } else {
+        el.textContent = (r === 8 ? '--' : '');
+        if(r === 8) prevSrc[c] = '--';
       }
-      counts.push(cnt);
-      setDisp(10,c,cnt);
     }
-    // 第 9 行第 1 格：第 9 行第 2～9 格数字之和
-    var sum9 = 0;
-    for(var c=2;c<=9;c++){ var n = val(9,c); if(n!==null) sum9 += n; }
-    setDisp(9,1,sum9);
-    // 第 10 行第 1 格：计数之和
-    var sum10 = 0;
-    for(var i=0;i<counts.length;i++) sum10 += counts[i];
-    setDisp(10,1,sum10);
+    rebuildOptions();
+    compute();
+    saveCurrent();
   }
+  var schemeSel = document.getElementById('scheme-select');
+  schemeSel.addEventListener('change', function(){ switchScheme(schemeSel.value); });
+  document.getElementById('btn-add').addEventListener('click', function(){
+    var n = schemes.length + 1, name = '方案' + n;
+    var names = schemes.map(function(s){ return s.name; });
+    while(names.indexOf(name) !== -1){ n++; name = '方案' + n; }
+    var id = 's' + Date.now();
+    schemes.push({id: id, name: name, data: defaultData(), note: ''});
+    switchScheme(id);
+  });
+  var renameForm = document.getElementById('rename-form');
+  document.getElementById('btn-rename').addEventListener('click', function(){
+    var inp = document.getElementById('rename-input');
+    var s = current(); inp.value = s ? s.name : '';
+    renameForm.classList.toggle('show');
+    inp.focus();
+  });
+  document.getElementById('rename-ok').addEventListener('click', function(){
+    var inp = document.getElementById('rename-input');
+    var name = inp.value.trim();
+    var s = current();
+    if(name !== '' && s){ s.name = name; saveStore(); refreshSchemeBar(); }
+    renameForm.classList.remove('show');
+  });
+  document.getElementById('rename-cancel').addEventListener('click', function(){
+    renameForm.classList.remove('show');
+  });
+  var delBtn = document.getElementById('btn-del');
+  delBtn.addEventListener('click', function(){
+    if(delBtn.dataset.confirming !== '1'){
+      delBtn.dataset.confirming = '1';
+      delBtn.textContent = '确认删除？';
+      return;
+    }
+    delBtn.dataset.confirming = ''; delBtn.textContent = '删除';
+    var idx = -1;
+    for(var i=0;i<schemes.length;i++) if(schemes[i].id === currentId) idx = i;
+    if(idx === -1) return;
+    schemes.splice(idx, 1);
+    if(schemes.length === 0){
+      schemes.push({id: 's' + Date.now(), name: '方案1', data: defaultData(), note: ''});
+    }
+    currentId = schemes[Math.max(0, idx - 1)].id;
+    var s = current();
+    applyData(s ? s.data : defaultData());
+    if(noteEl) noteEl.value = s ? (s.note || '') : '';
+    initPrev();
+    rebuildOptions();
+    compute();
+    refreshSchemeBar();
+    saveStore();
+  });
+  document.getElementById('btn-reset-part').addEventListener('click', function(){ resetCells(7); });
+  document.getElementById('btn-reset-all').addEventListener('click', function(){ resetCells(9); });
+  if(noteEl) noteEl.addEventListener('input', saveCurrent);
   document.querySelector('.main-table').addEventListener('input', function(e){
-    if(e.target && e.target.tagName === 'SELECT') syncDisplay(e.target);
+    if(e.target && e.target.tagName === 'SELECT'){
+      var sp = e.target.parentElement.querySelector('.cell-text');
+      if(sp) sp.textContent = e.target.value;        // 空显示为空白
+    }
     syncRename(e.target);
     rebuildOptions();
     compute();
-    saveData();
+    saveCurrent();
   });
-  restoreData();
-  for(var c=2;c<=9;c++) prevSrc[c] = rawText(8,c);
+  // ---------- 初始化 ----------
+  var store = loadStore();
+  if(store && store.schemes && store.schemes.length){
+    schemes = store.schemes;
+    currentId = store.current;
+    if(!current()) currentId = schemes[0].id;
+  } else {
+    var migrated = null;
+    try{ migrated = JSON.parse(localStorage.getItem(OLD_KEY)); }catch(e){}
+    var sid = 's' + Date.now();
+    schemes = [{id: sid, name: '方案1', data: (migrated && typeof migrated === 'object') ? migrated : defaultData(), note: ''}];
+    currentId = sid;
+    saveStore();
+  }
+  applyData((current() || {data: defaultData()}).data);
+  if(noteEl) noteEl.value = (current() || {note: ''}).note || '';
+  initPrev();
   rebuildOptions();
-  document.querySelectorAll('select.cell-select').forEach(function(s){ syncDisplay(s); });
   compute();
+  refreshSchemeBar();
 })();
 </script>
 </body>

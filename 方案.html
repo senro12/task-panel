@@ -68,6 +68,8 @@
   tr.row-white .v[contenteditable]:hover{background:rgba(59,130,246,.10);box-shadow:0 0 0 1px #93c5fd inset;}
   tr.row-white .v[contenteditable]:focus{background:#fff;box-shadow:0 0 0 2px #3b82f6;}
   td.data-cell{position:relative;padding:0;}
+  td.popup-open{background:#eef2ff !important;box-shadow:inset 0 0 0 2px #3b82f6;}
+  td.popup-open .cell-text{color:#1d4ed8;}
   .cell-text{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
              padding:3px 8px;font-weight:600;color:#111827;font-variant-numeric:tabular-nums;}
   select.cell-select{display:none;}   /* 原生下拉彻底隐藏，只保留白色自定义弹窗 */
@@ -361,9 +363,15 @@
   // ---------- 数据格下拉弹出列表 ----------
   var popup = document.getElementById('cell-popup');
   var popupFor = null;
-  function closePopup(){ popup.classList.remove('open'); popupFor = null; }
+  function closePopup(){
+    popup.classList.remove('open');
+    if(popupFor) popupFor.parentElement.classList.remove('popup-open');
+    popupFor = null;
+  }
   function openPopup(selectEl){
+    closePopup();                          // 先关闭已打开的弹窗（一次只显示一个）
     popupFor = selectEl;
+    selectEl.parentElement.classList.add('popup-open');
     popup.innerHTML = '';
     Array.from(selectEl.options).forEach(function(o){
       var item = document.createElement('div');

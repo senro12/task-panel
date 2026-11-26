@@ -72,6 +72,13 @@
              padding:3px 8px;font-weight:600;color:#111827;font-variant-numeric:tabular-nums;}
   select.cell-select{position:absolute;inset:0;width:100%;height:100%;opacity:0;
                      border:none;cursor:pointer;font:inherit;padding:0;}
+  .cell-popup{position:fixed;display:none;background:#fff;border:1px solid #cbd5e1;
+              border-radius:8px;box-shadow:0 10px 28px rgba(15,23,42,.18);z-index:60;
+              max-height:240px;overflow:auto;padding:4px 0;}
+  .cell-popup.open{display:block;}
+  .popup-item{padding:8px 14px;font-size:14px;color:#111827;cursor:pointer;white-space:nowrap;}
+  .popup-item:hover{background:#f1f5f9;}
+  .popup-item.active{background:#eef2ff;color:#1d4ed8;}
   .note-mod{margin-top:20px;}
   .mod-title{font-weight:600;font-size:14px;color:#1f2937;margin-bottom:8px;}
   #note{width:100%;min-height:90px;border:1px solid #cbd5e1;border-radius:8px;
@@ -132,7 +139,8 @@
     </div>
   </div>
 </div>
-<div id="scheme-popup"></div>
+<div id="cell-popup" class="cell-popup"></div>
+<div id="scheme-popup" class="scheme-popup"></div>
 <script>
 (function(){
   var SCHEME_KEY = 'fangan-data-v4';
@@ -351,6 +359,56 @@
   });
   window.addEventListener('scroll', closeSchemePopup, true);
   document.addEventListener('keydown', function(e){ if(e.key === 'Escape') closeSchemePopup(); });
+  // ---------- 数据格下拉弹出列表 ----------
+  var popup = document.getElementById('cell-popup');
+  var popupFor = null;
+  function closePopup(){ popup.classList.remove('open'); popupFor = null; }
+  function openPopup(selectEl){
+    popupFor = selectEl;
+    popup.innerHTML = '';
+    Array.from(selectEl.options).forEach(function(o){
+      var item = document.createElement('div');
+      item.className = 'popup-item' + (o.selected ? ' active' : '');
+      item.dataset.value = o.value;
+      item.textContent = o.textContent;
+      popup.appendChild(item);
+    });
+    var rect = selectEl.parentElement.getBoundingClientRect();
+    popup.style.minWidth = Math.max(rect.width, 140) + 'px';
+    popup.style.left = rect.left + 'px';
+    popup.style.top = (rect.bottom + 4) + 'px';
+    popup.style.visibility = 'hidden';
+    popup.classList.add('open');
+    var h = popup.offsetHeight;
+    if(rect.bottom + h > window.innerHeight) popup.style.top = (rect.top - h - 4) + 'px';
+    popup.style.visibility = 'visible';
+  }
+  popup.addEventListener('click', function(e){
+    var item = e.target.closest('.popup-item'); if(!item) return;
+    if(!popupFor) return;
+    popupFor.value = item.dataset.value;
+    var sp = popupFor.parentElement.querySelector('.cell-text');
+    if(sp) sp.textContent = item.dataset.value;   // 空显示为空白
+    closePopup();
+    compute();
+    saveCurrent();
+  });
+  document.addEventListener('mousedown', function(e){
+    if(!popup.classList.contains('open')) return;
+    if(popup.contains(e.target)) return;
+    var cell = e.target.closest ? e.target.closest('td.data-cell') : null;
+    if(cell) return;
+    closePopup();
+  });
+  window.addEventListener('scroll', closePopup, true);
+  window.addEventListener('resize', closePopup);
+  document.addEventListener('keydown', function(e){ if(e.key === 'Escape') closePopup(); });
+  document.querySelectorAll('td.data-cell').forEach(function(td){
+    td.addEventListener('click', function(){
+      var sel = td.querySelector('select.cell-select');
+      if(sel) openPopup(sel);
+    });
+  });
   var delBtn = document.getElementById('btn-del');
   delBtn.addEventListener('click', function(){
     if(delBtn.dataset.confirming !== '1'){

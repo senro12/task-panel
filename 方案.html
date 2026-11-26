@@ -228,6 +228,15 @@
       }
       counts.push(cnt);
       setDisp(10,c,cnt);
+      // 状态底色：少于默认灰 / 等于浅绿 / 大于浅红（目标 = 第 9 行对应数字）
+      var target = val(9,c);
+      var tdEl = grid['10,'+c] ? grid['10,'+c].parentElement : null;
+      if(tdEl){
+        var bg = '#E6E6E6';
+        if(target !== null && cnt === target) bg = '#CAF2C2';
+        else if(target !== null && cnt > target) bg = '#FFD1CA';
+        tdEl.style.background = bg;
+      }
     }
     var sum9 = 0;
     for(var c=2;c<=9;c++){ var n = val(9,c); if(n!==null) sum9 += n; }

@@ -70,8 +70,7 @@
   td.data-cell{position:relative;padding:0;}
   .cell-text{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
              padding:3px 8px;font-weight:600;color:#111827;font-variant-numeric:tabular-nums;}
-  select.cell-select{position:absolute;inset:0;width:100%;height:100%;opacity:0;
-                     border:none;cursor:pointer;font:inherit;padding:0;}
+  select.cell-select{display:none;}   /* 原生下拉彻底隐藏，只保留白色自定义弹窗 */
   .cell-popup{position:fixed;display:none;background:#fff;border:1px solid #cbd5e1;
               border-radius:8px;box-shadow:0 10px 28px rgba(15,23,42,.18);z-index:60;
               max-height:240px;overflow:auto;padding:4px 0;}
@@ -400,7 +399,10 @@
     if(cell) return;
     closePopup();
   });
-  window.addEventListener('scroll', closePopup, true);
+  window.addEventListener('scroll', function(e){
+    if(popup.contains(e.target)) return;     // 弹层内部滚动不关闭
+    closePopup();
+  }, true);
   window.addEventListener('resize', closePopup);
   document.addEventListener('keydown', function(e){ if(e.key === 'Escape') closePopup(); });
   document.querySelectorAll('td.data-cell').forEach(function(td){

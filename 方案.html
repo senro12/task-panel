@@ -14,25 +14,34 @@
   h1{margin:0;font-size:22px;display:flex;align-items:center;gap:10px;}
   h1::before{content:"";width:6px;height:22px;border-radius:3px;background:linear-gradient(#203864,#595959);}
   .scheme-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
-  .scheme-combo{display:inline-flex;align-items:stretch;width:220px;background:#fff;
-                border:1px solid #cbd5e1;border-radius:6px;overflow:hidden;}
   .scheme-name{flex:1;display:flex;align-items:center;padding:6px 10px;font-size:13px;
                font-weight:600;color:#334155;min-width:0;white-space:nowrap;overflow:hidden;
-               text-overflow:ellipsis;outline:none;cursor:text;}
+               text-overflow:ellipsis;cursor:text;}
   .scheme-name:hover{background:rgba(59,130,246,.08);}
   .scheme-name:focus{background:#fff;box-shadow:inset 0 0 0 2px #3b82f6;}
-  .scheme-toggle{width:28px;border:none;border-left:1px solid #e5e9ef;background:transparent;
-                 cursor:pointer;color:#6b7280;font-size:11px;padding:0;}
-  .scheme-toggle:hover{background:#f1f5f9;}
   .btn{background:#fff;border:1px solid #cbd5e1;border-radius:6px;padding:6px 12px;
        cursor:pointer;font:13px "PingFang SC","Microsoft YaHei",sans-serif;color:#374151;
        transition:background .12s;}
   .btn:hover{background:#f1f5f9;}
   .btn.danger{color:#b91c1c;border-color:#fca5a5;}
   .btn.danger:hover{background:#fef2f2;}
+  .scheme-combo{display:inline-flex;align-items:stretch;width:220px;background:#fff;
+                border:1px solid #cbd5e1;border-radius:6px;overflow:hidden;}
+  .scheme-toggle{width:28px;border:none;border-left:1px solid #e5e9ef;background:transparent;
+                 cursor:pointer;color:#6b7280;font-size:11px;padding:0;}
+  .scheme-toggle:hover{background:#f1f5f9;}
+  .scheme-popup{position:fixed;display:none;background:#fff;border:1px solid #cbd5e1;
+                border-radius:8px;box-shadow:0 10px 28px rgba(15,23,42,.18);z-index:60;
+                min-width:220px;max-height:240px;overflow:auto;padding:4px 0;}
+  .scheme-popup.open{display:block;}
+  .scheme-option{padding:8px 12px;font-size:13px;color:#111827;cursor:pointer;white-space:nowrap;}
+  .scheme-option:hover{background:#f1f5f9;}
+  .scheme-option.active{background:#eef2ff;color:#1d4ed8;font-weight:600;}
+  .ops{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px;}
   .btn.primary{background:#203864;border-color:#203864;color:#fff;}
   .btn.primary:hover{background:#2b4a7c;}
-  .ops{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px;}
+  .hint{font-size:12px;color:#9ca3af;}
+  .btn[data-confirming='1']{color:#b91c1c !important;border-color:#fca5a5 !important;background:#fef2f2 !important;}
   table{width:100%;table-layout:fixed;border-collapse:collapse;font-size:14px;background:#fff;}
   th,td{border-right:1px solid #c5cdd6;border-bottom:1px solid #c5cdd6;
         text-align:center;height:44px;padding:0;position:relative;}
@@ -41,16 +50,16 @@
   thead th{border-top:2px solid #94a3b8;}
   tr:last-child td{border-bottom:2px solid #94a3b8;}
   tr.row-hd th{background:#203864;color:#fff;font-weight:600;}
-  tr.row-gray td{background:#f6f8fa;}
   tr.row-white td{background:#fff;}
   tr.row-src td{background:#203864;color:#fff;font-weight:600;}
   tr td.dg{background:#595959;color:#fff;font-weight:600;}
-  th.black,td.black{background:#000 !important;color:#fff;}
-  th.center,td.center{text-align:center;}
-  .v{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
-     padding:3px 8px;border-radius:0;outline:none;cursor:text;
-     transition:background .12s,box-shadow .12s;white-space:normal;}
+  th.black,td.black{background:#000 !important;}
+  th.center,td.center{text-align:center;vertical-align:middle;}
+  .v{border-radius:0;outline:none;cursor:text;transition:background .12s,box-shadow .12s;}
   .v.computed{cursor:default;font-weight:600;color:#111827;}
+  .v.num{font-weight:600;}
+  th .v, td .v{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+               padding:3px 8px;}
   td.dg .v, tr.row-hd .v, tr.row-src .v{color:#fff;}
   td.dg .v[contenteditable]:hover{background:rgba(59,130,246,.12) !important;box-shadow:0 0 0 1px #93c5fd inset;}
   td.dg .v[contenteditable]:focus{background:rgba(59,130,246,.22) !important;box-shadow:0 0 0 2px #3b82f6;}
@@ -60,10 +69,15 @@
   tr.row-src .v[contenteditable]:focus{background:rgba(255,255,255,.22);box-shadow:0 0 0 2px #fff;}
   tr.row-white .v[contenteditable]:hover{background:rgba(59,130,246,.10);box-shadow:0 0 0 1px #93c5fd inset;}
   tr.row-white .v[contenteditable]:focus{background:#fff;box-shadow:0 0 0 2px #3b82f6;}
-  td.data-cell{position:relative;padding:0;cursor:pointer;}
+  td.data-cell{position:relative;padding:0;}
+  td.popup-open{background:#eef2ff !important;box-shadow:inset 0 0 0 2px #3b82f6;}
+  td.popup-open .cell-text{color:#1d4ed8;}
   .cell-text{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
              padding:3px 8px;font-weight:600;color:#111827;font-variant-numeric:tabular-nums;}
-  select.cell-select{display:none;}
+  select.cell-select{display:none;}   /* 原生下拉彻底隐藏，只保留白色自定义弹窗 */
+  td.e6 .v[contenteditable]:focus{background:transparent;box-shadow:inset 0 0 0 2px #3b82f6;}
+  tr td.e6{background:#E6E6E6;}
+  tr td.e6 .v{font-weight:600;}
   .cell-popup{position:fixed;display:none;background:#fff;border:1px solid #cbd5e1;
               border-radius:8px;box-shadow:0 10px 28px rgba(15,23,42,.18);z-index:60;
               max-height:240px;overflow:auto;padding:4px 0;}
@@ -80,8 +94,6 @@
   .desc-mod{margin-top:16px;}
   .desc-text{background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:12px 14px;
              font-size:13px;color:#4b5563;line-height:1.7;}
-  .desc-text ul{margin:0;padding-left:20px;}
-  .desc-text li{margin:5px 0;}
   .desc-text b{color:#1f2937;}
 </style>
 </head>
@@ -103,15 +115,15 @@
     <button class="btn primary" id="btn-reset-all">重置全部</button>
   </div>
   <table class="main-table">
-<thead><tr class="row-hd"><th class="center black"><span class="v" contenteditable spellcheck="false" data-rc="1,1">位置</span></th><th class="center"><span class="v" contenteditable spellcheck="false" data-rc="1,2" data-ph="名称1"></span></th><th class="center"><span class="v" contenteditable spellcheck="false" data-rc="1,3" data-ph="名称2"></span></th><th class="center"><span class="v" contenteditable spellcheck="false" data-rc="1,4" data-ph="名称3"></span></th><th class="center"><span class="v" contenteditable spellcheck="false" data-rc="1,5" data-ph="名称4"></span></th><th class="center"><span class="v" contenteditable spellcheck="false" data-rc="1,6" data-ph="名称5"></span></th><th class="center"><span class="v" contenteditable spellcheck="false" data-rc="1,7" data-ph="名称6"></span></th><th class="center"><span class="v" contenteditable spellcheck="false" data-rc="1,8" data-ph="名称7"></span></th><th class="center"><span class="v" contenteditable spellcheck="false" data-rc="1,9" data-ph="名称8"></span></th></tr></thead>
-<tr class="row-gray"><td class="dg center"><span class="v" contenteditable spellcheck="false" data-rc="2,1"></span></td><td class="data-cell"><span class="cell-text" data-cur="2,2"></span><select class="cell-select" data-rc="2,2"><option value="">[空]</option></select></td><td class="data-cell"><span class="cell-text" data-cur="2,3"></span><select class="cell-select" data-rc="2,3"><option value="">[空]</option></select></td><td class="data-cell"><span class="cell-text" data-cur="2,4"></span><select class="cell-select" data-rc="2,4"><option value="">[空]</option></select></td><td class="data-cell"><span class="cell-text" data-cur="2,5"></span><select class="cell-select" data-rc="2,5"><option value="">[空]</option></select></td><td class="data-cell"><span class="cell-text" data-cur="2,6"></span><select class="cell-select" data-rc="2,6"><option value="">[空]</option></select></td><td class="data-cell"><span class="cell-text" data-cur="2,7"></span><select class="cell-select" data-rc="2,7"><option value="">[空]</option></select></td><td class="data-cell"><span class="cell-text" data-cur="2,8"></span><select class="cell-select" data-rc="2,8"><option value="">[空]</option></select></td><td class="data-cell"><span class="cell-text" data-cur="2,9"></span><select class="cell-select" data-rc="2,9"><option value="">[空]</option></select></td></tr>
+<thead><tr class="row-hd"><th class="center black"><span class="v" contenteditable spellcheck="false" data-rc="1,1">位置</span></th><th class="center"><span class="v" contenteditable spellcheck="false" data-rc="1,2">名称1</span></th><th class="center"><span class="v" contenteditable spellcheck="false" data-rc="1,3">名称2</span></th><th class="center"><span class="v" contenteditable spellcheck="false" data-rc="1,4">名称3</span></th><th class="center"><span class="v" contenteditable spellcheck="false" data-rc="1,5">名称4</span></th><th class="center"><span class="v" contenteditable spellcheck="false" data-rc="1,6">名称5</span></th><th class="center"><span class="v" contenteditable spellcheck="false" data-rc="1,7">名称6</span></th><th class="center"><span class="v" contenteditable spellcheck="false" data-rc="1,8">名称7</span></th><th class="center"><span class="v" contenteditable spellcheck="false" data-rc="1,9">名称8</span></th></tr></thead>
+<tr class="row-white"><td class="dg center"><span class="v" contenteditable spellcheck="false" data-rc="2,1"></span></td><td class="data-cell"><span class="cell-text" data-cur="2,2"></span><select class="cell-select" data-rc="2,2"><option value="">[空]</option></select></td><td class="data-cell"><span class="cell-text" data-cur="2,3"></span><select class="cell-select" data-rc="2,3"><option value="">[空]</option></select></td><td class="data-cell"><span class="cell-text" data-cur="2,4"></span><select class="cell-select" data-rc="2,4"><option value="">[空]</option></select></td><td class="data-cell"><span class="cell-text" data-cur="2,5"></span><select class="cell-select" data-rc="2,5"><option value="">[空]</option></select></td><td class="data-cell"><span class="cell-text" data-cur="2,6"></span><select class="cell-select" data-rc="2,6"><option value="">[空]</option></select></td><td class="data-cell"><span class="cell-text" data-cur="2,7"></span><select class="cell-select" data-rc="2,7"><option value="">[空]</option></select></td><td class="data-cell"><span class="cell-text" data-cur="2,8"></span><select class="cell-select" data-rc="2,8"><option value="">[空]</option></select></td><td class="data-cell"><span class="cell-text" data-cur="2,9"></span><select class="cell-select" data-rc="2,9"><option value="">[空]</option></select></td></tr>
 <tr class="row-white"><td class="dg center"><span class="v" contenteditable spellcheck="false" data-rc="3,1"></span></td><td class="data-cell"><span class="cell-text" data-cur="3,2"></span><select class="cell-select" data-rc="3,2"><option value="">[空]</option></select></td><td class="data-cell"><span class="cell-text" data-cur="3,3"></span><select class="cell-select" data-rc="3,3"><option value="">[空]</option></select></td><td class="data-cell"><span class="cell-text" data-cur="3,4"></span><select class="cell-select" data-rc="3,4"><option value="">[空]</option></select></td><td class="data-cell"><span class="cell-text" data-cur="3,5"></span><select class="cell-select" data-rc="3,5"><option value="">[空]</option></select></td><td class="data-cell"><span class="cell-text" data-cur="3,6"></span><select class="cell-select" data-rc="3,6"><option value="">[空]</option></select></td><td class="data-cell"><span class="cell-text" data-cur="3,7"></span><select class="cell-select" data-rc="3,7"><option value="">[空]</option></select></td><td class="data-cell"><span class="cell-text" data-cur="3,8"></span><select class="cell-select" data-rc="3,8"><option value="">[空]</option></select></td><td class="data-cell"><span class="cell-text" data-cur="3,9"></span><select class="cell-select" data-rc="3,9"><option value="">[空]</option></select></td></tr>
 <tr class="row-white"><td class="dg center"><span class="v" contenteditable spellcheck="false" data-rc="4,1"></span></td><td class="data-cell"><span class="cell-text" data-cur="4,2"></span><select class="cell-select" data-rc="4,2"><option value="">[空]</option></select></td><td class="data-cell"><span class="cell-text" data-cur="4,3"></span><select class="cell-select" data-rc="4,3"><option value="">[空]</option></select></td><td class="data-cell"><span class="cell-text" data-cur="4,4"></span><select class="cell-select" data-rc="4,4"><option value="">[空]</option></select></td><td class="data-cell"><span class="cell-text" data-cur="4,5"></span><select class="cell-select" data-rc="4,5"><option value="">[空]</option></select></td><td class="data-cell"><span class="cell-text" data-cur="4,6"></span><select class="cell-select" data-rc="4,6"><option value="">[空]</option></select></td><td class="data-cell"><span class="cell-text" data-cur="4,7"></span><select class="cell-select" data-rc="4,7"><option value="">[空]</option></select></td><td class="data-cell"><span class="cell-text" data-cur="4,8"></span><select class="cell-select" data-rc="4,8"><option value="">[空]</option></select></td><td class="data-cell"><span class="cell-text" data-cur="4,9"></span><select class="cell-select" data-rc="4,9"><option value="">[空]</option></select></td></tr>
 <tr class="row-white"><td class="dg center"><span class="v" contenteditable spellcheck="false" data-rc="5,1"></span></td><td class="data-cell"><span class="cell-text" data-cur="5,2"></span><select class="cell-select" data-rc="5,2"><option value="">[空]</option></select></td><td class="data-cell"><span class="cell-text" data-cur="5,3"></span><select class="cell-select" data-rc="5,3"><option value="">[空]</option></select></td><td class="data-cell"><span class="cell-text" data-cur="5,4"></span><select class="cell-select" data-rc="5,4"><option value="">[空]</option></select></td><td class="data-cell"><span class="cell-text" data-cur="5,5"></span><select class="cell-select" data-rc="5,5"><option value="">[空]</option></select></td><td class="data-cell"><span class="cell-text" data-cur="5,6"></span><select class="cell-select" data-rc="5,6"><option value="">[空]</option></select></td><td class="data-cell"><span class="cell-text" data-cur="5,7"></span><select class="cell-select" data-rc="5,7"><option value="">[空]</option></select></td><td class="data-cell"><span class="cell-text" data-cur="5,8"></span><select class="cell-select" data-rc="5,8"><option value="">[空]</option></select></td><td class="data-cell"><span class="cell-text" data-cur="5,9"></span><select class="cell-select" data-rc="5,9"><option value="">[空]</option></select></td></tr>
 <tr class="row-white"><td class="dg center"><span class="v" contenteditable spellcheck="false" data-rc="6,1"></span></td><td class="data-cell"><span class="cell-text" data-cur="6,2"></span><select class="cell-select" data-rc="6,2"><option value="">[空]</option></select></td><td class="data-cell"><span class="cell-text" data-cur="6,3"></span><select class="cell-select" data-rc="6,3"><option value="">[空]</option></select></td><td class="data-cell"><span class="cell-text" data-cur="6,4"></span><select class="cell-select" data-rc="6,4"><option value="">[空]</option></select></td><td class="data-cell"><span class="cell-text" data-cur="6,5"></span><select class="cell-select" data-rc="6,5"><option value="">[空]</option></select></td><td class="data-cell"><span class="cell-text" data-cur="6,6"></span><select class="cell-select" data-rc="6,6"><option value="">[空]</option></select></td><td class="data-cell"><span class="cell-text" data-cur="6,7"></span><select class="cell-select" data-rc="6,7"><option value="">[空]</option></select></td><td class="data-cell"><span class="cell-text" data-cur="6,8"></span><select class="cell-select" data-rc="6,8"><option value="">[空]</option></select></td><td class="data-cell"><span class="cell-text" data-cur="6,9"></span><select class="cell-select" data-rc="6,9"><option value="">[空]</option></select></td></tr>
 <tr><td class="dg center"><span class="v" contenteditable spellcheck="false" data-rc="7,1"></span></td><td class="center e6"><span class="v" contenteditable spellcheck="false" data-rc="7,2"></span></td><td class="center e6"><span class="v" contenteditable spellcheck="false" data-rc="7,3"></span></td><td class="center e6"><span class="v" contenteditable spellcheck="false" data-rc="7,4"></span></td><td class="center e6"><span class="v" contenteditable spellcheck="false" data-rc="7,5"></span></td><td class="center e6"><span class="v" contenteditable spellcheck="false" data-rc="7,6"></span></td><td class="center e6"><span class="v" contenteditable spellcheck="false" data-rc="7,7"></span></td><td class="center e6"><span class="v" contenteditable spellcheck="false" data-rc="7,8"></span></td><td class="center e6"><span class="v" contenteditable spellcheck="false" data-rc="7,9"></span></td></tr>
-<tr class="row-src"><td class="center black"><span class="v" contenteditable spellcheck="false" data-rc="8,1">总计</span></td><td class="center"><span class="v" contenteditable spellcheck="false" data-rc="8,2"></span></td><td class="center"><span class="v" contenteditable spellcheck="false" data-rc="8,3"></span></td><td class="center"><span class="v" contenteditable spellcheck="false" data-rc="8,4"></span></td><td class="center"><span class="v" contenteditable spellcheck="false" data-rc="8,5"></span></td><td class="center"><span class="v" contenteditable spellcheck="false" data-rc="8,6"></span></td><td class="center"><span class="v" contenteditable spellcheck="false" data-rc="8,7"></span></td><td class="center"><span class="v" contenteditable spellcheck="false" data-rc="8,8"></span></td><td class="center"><span class="v" contenteditable spellcheck="false" data-rc="8,9"></span></td></tr>
-<tr class="row-gray"><td class="dg center"><span class="v computed" data-rc="9,1"></span></td><td class="center num"><span class="v num" contenteditable spellcheck="false" data-rc="9,2"></span></td><td class="center num"><span class="v num" contenteditable spellcheck="false" data-rc="9,3"></span></td><td class="center num"><span class="v num" contenteditable spellcheck="false" data-rc="9,4"></span></td><td class="center num"><span class="v num" contenteditable spellcheck="false" data-rc="9,5"></span></td><td class="center num"><span class="v num" contenteditable spellcheck="false" data-rc="9,6"></span></td><td class="center num"><span class="v num" contenteditable spellcheck="false" data-rc="9,7"></span></td><td class="center num"><span class="v num" contenteditable spellcheck="false" data-rc="9,8"></span></td><td class="center num"><span class="v num" contenteditable spellcheck="false" data-rc="9,9"></span></td></tr>
+<tr class="row-src"><td class="center black"><span class="v" contenteditable spellcheck="false" data-rc="8,1">总计</span></td><td class="center"><span class="v" contenteditable spellcheck="false" data-rc="8,2">--</span></td><td class="center"><span class="v" contenteditable spellcheck="false" data-rc="8,3">--</span></td><td class="center"><span class="v" contenteditable spellcheck="false" data-rc="8,4">--</span></td><td class="center"><span class="v" contenteditable spellcheck="false" data-rc="8,5">--</span></td><td class="center"><span class="v" contenteditable spellcheck="false" data-rc="8,6">--</span></td><td class="center"><span class="v" contenteditable spellcheck="false" data-rc="8,7">--</span></td><td class="center"><span class="v" contenteditable spellcheck="false" data-rc="8,8">--</span></td><td class="center"><span class="v" contenteditable spellcheck="false" data-rc="8,9">--</span></td></tr>
+<tr class="row-white"><td class="dg center"><span class="v computed" data-rc="9,1"></span></td><td class="center"><span class="v num" contenteditable spellcheck="false" data-rc="9,2"></span></td><td class="center"><span class="v num" contenteditable spellcheck="false" data-rc="9,3"></span></td><td class="center"><span class="v num" contenteditable spellcheck="false" data-rc="9,4"></span></td><td class="center"><span class="v num" contenteditable spellcheck="false" data-rc="9,5"></span></td><td class="center"><span class="v num" contenteditable spellcheck="false" data-rc="9,6"></span></td><td class="center"><span class="v num" contenteditable spellcheck="false" data-rc="9,7"></span></td><td class="center"><span class="v num" contenteditable spellcheck="false" data-rc="9,8"></span></td><td class="center"><span class="v num" contenteditable spellcheck="false" data-rc="9,9"></span></td></tr>
 <tr class="row-white"><td class="dg center"><span class="v computed" data-rc="10,1"></span></td><td class="center"><span class="v computed" data-rc="10,2"></span></td><td class="center"><span class="v computed" data-rc="10,3"></span></td><td class="center"><span class="v computed" data-rc="10,4"></span></td><td class="center"><span class="v computed" data-rc="10,5"></span></td><td class="center"><span class="v computed" data-rc="10,6"></span></td><td class="center"><span class="v computed" data-rc="10,7"></span></td><td class="center"><span class="v computed" data-rc="10,8"></span></td><td class="center"><span class="v computed" data-rc="10,9"></span></td></tr>
   </table>
   <div class="note-mod">
@@ -122,8 +134,10 @@
     <div class="mod-title">说明</div>
     <div class="desc-text">
       <ul>
+        <li><b>重置部分</b>＝清空第 2～9 列第 2～7 行；<b>重置全部</b>＝清空第 2～9 列第 2～9 行（含第八行名称恢复为“--”）</li>
         <li>主表数据格（第 2～9 列）<b>点击即弹出下拉选择</b>：选项 = 第八行“总计”右侧的非“--”内容，第八行改名后选项与已选内容自动同步；未选择的格子在下拉列表中显示[空]，单元格内显示为空白</li>
-        <li><b>第 10 行</b>自动统计每个名称在第 2～6 行数据中出现的次数（0 不显示），<b>第 9 行第 1 格</b>为第 9 行数字之和</li>
+        <li><b>第 10 行</b>自动统计每个名称在第 2～6 行数据中出现的次数（0 不显示）</li>
+        <li><b>第 9 行第 1 格</b>为第 9 行数字之和</li>
         <li>第一列深灰格文字可直接编辑</li>
         <li><b>数据自动保存在本浏览器</b>：刷新/重开/页面更新都不丢，每人各自一份，不写回任何文件</li>
         <li>多方案之间数据相互独立，可随时切换、新增、改名、删除</li>
@@ -155,7 +169,9 @@
   function defaultData(){
     var d = {};
     d['1,1'] = '位置';
+    for(var c=2;c<=9;c++) d['1,'+c] = '名称' + (c-1);
     d['8,1'] = '总计';
+    for(var c=2;c<=9;c++) d['8,'+c] = '--';
     return d;
   }
   var schemes = [], currentId = null, prevSrc = {};
@@ -174,10 +190,6 @@
     document.querySelectorAll('[data-rc]').forEach(function(el){ data[el.dataset.rc] = cellText(el); });
     return data;
   }
-  function syncDisplay(s){
-    var sp = s.parentElement.querySelector('.cell-text');
-    if(sp) sp.textContent = s.value;      // 空显示为空白
-  }
   function applyData(data){
     Object.keys(data).forEach(function(rc){
       var el = grid[rc]; if(!el || el.classList.contains('computed')) return;
@@ -188,7 +200,8 @@
           o.value = v; o.textContent = v; el.appendChild(o);
         }
         el.value = v;
-        syncDisplay(el);
+        var sp = el.parentElement.querySelector('.cell-text');
+        if(sp) sp.textContent = v;        // 空显示为空白，[空] 只在下拉列表里
       } else {
         el.textContent = v;
       }
@@ -249,7 +262,9 @@
     var nameEl = document.getElementById('scheme-name');
     if(nameEl && document.activeElement !== nameEl) nameEl.textContent = s ? s.name : '';
   }
-  function initPrev(){ for(var c=2;c<=9;c++) prevSrc[c] = rawText(8,c); }
+  function initPrev(){
+    for(var c=2;c<=9;c++) prevSrc[c] = rawText(8,c);
+  }
   function switchScheme(id){
     saveCurrent();
     currentId = id;
@@ -273,7 +288,8 @@
       document.querySelectorAll('select.cell-select').forEach(function(s){
         if(s.value === oldName){
           s.value = newName;
-          syncDisplay(s);
+          var sp = s.parentElement.querySelector('.cell-text');
+          if(sp) sp.textContent = newName;
         }
       });
     }
@@ -284,7 +300,7 @@
       var el = grid[r+','+c]; if(!el) continue;
       if(el.tagName === 'SELECT'){
         el.value = '';
-        syncDisplay(el);
+        var sp = el.parentElement.querySelector('.cell-text'); if(sp) sp.textContent = '';
       } else {
         el.textContent = (r === 8 ? '--' : '');
         if(r === 8) prevSrc[c] = '--';
@@ -294,72 +310,6 @@
     compute();
     saveCurrent();
   }
-  // ---------- 数据格下拉弹出列表 ----------
-  var popup = document.getElementById('cell-popup');
-  var popupFor = null;
-  function closePopup(){ popup.classList.remove('open'); popupFor = null; }
-  function openPopup(selectEl){
-    closePopup();
-    popupFor = selectEl;
-    popup.innerHTML = '';
-    Array.from(selectEl.options).forEach(function(o){
-      var item = document.createElement('div');
-      item.className = 'popup-item' + (o.selected ? ' active' : '');
-      item.dataset.value = o.value;
-      item.textContent = o.textContent;
-      popup.appendChild(item);
-    });
-    var rect = selectEl.parentElement.getBoundingClientRect();
-    popup.style.minWidth = Math.max(rect.width, 140) + 'px';
-    popup.style.left = rect.left + 'px';
-    popup.style.top = (rect.bottom + 4) + 'px';
-    popup.style.visibility = 'hidden';
-    popup.classList.add('open');
-    var h = popup.offsetHeight;
-    if(rect.bottom + h > window.innerHeight) popup.style.top = (rect.top - h - 4) + 'px';
-    popup.style.visibility = 'visible';
-  }
-  popup.addEventListener('click', function(e){
-    var item = e.target.closest('.popup-item'); if(!item) return;
-    if(!popupFor) return;
-    popupFor.value = item.dataset.value;
-    syncDisplay(popupFor);
-    closePopup();
-    compute();
-    saveCurrent();
-  });
-  document.addEventListener('mousedown', function(e){
-    if(!popup.classList.contains('open')) return;
-    if(popup.contains(e.target)) return;
-    var cell = e.target.closest ? e.target.closest('td.data-cell') : null;
-    if(cell) return;
-    closePopup();
-  });
-  window.addEventListener('scroll', function(e){
-    if(popup.contains(e.target)) return;     // 弹层内部滚动不关闭
-    closePopup();
-  }, true);
-  window.addEventListener('resize', closePopup);
-  document.addEventListener('keydown', function(e){ if(e.key === 'Escape') closePopup(); });
-  document.querySelectorAll('td.data-cell').forEach(function(td){
-    td.addEventListener('click', function(){
-      var sel = td.querySelector('select.cell-select');
-      if(sel) openPopup(sel);
-    });
-  });
-  // ---------- 编辑事件 ----------
-  var noteEl = document.getElementById('note');
-  document.querySelector('.main-table').addEventListener('input', function(e){
-    if(e.target && e.target.tagName === 'SELECT') syncDisplay(e.target);
-    syncRename(e.target);
-    rebuildOptions();
-    compute();
-    saveCurrent();
-  });
-  if(noteEl) noteEl.addEventListener('input', saveCurrent);
-  // ---------- 方案栏 ----------
-  var nameEl = document.getElementById('scheme-name');
-  var nameBeforeEdit = '';
   document.getElementById('btn-add').addEventListener('click', function(){
     var n = schemes.length + 1, name = '方案' + n;
     var names = schemes.map(function(s){ return s.name; });
@@ -368,16 +318,20 @@
     schemes.push({id: id, name: name, data: defaultData(), note: ''});
     switchScheme(id);
   });
+  var nameEl = document.getElementById('scheme-name');
+  var nameBeforeEdit = '';
   nameEl.addEventListener('focus', function(){ nameBeforeEdit = nameEl.textContent.trim(); });
   nameEl.addEventListener('input', function(){
     var s = current(); if(!s) return;
-    s.name = nameEl.textContent.trim();
+    var name = nameEl.textContent.trim();
+    s.name = name;
     saveStore();
   });
   nameEl.addEventListener('blur', function(){
     var s = current(); if(!s) return;
     var name = nameEl.textContent.trim();
     if(name === ''){ name = nameBeforeEdit || '方案'; nameEl.textContent = name; s.name = name; }
+    refreshSchemeBar();
     saveStore();
   });
   nameEl.addEventListener('keydown', function(e){
@@ -420,8 +374,64 @@
   });
   window.addEventListener('scroll', closeSchemePopup, true);
   document.addEventListener('keydown', function(e){ if(e.key === 'Escape') closeSchemePopup(); });
-  document.getElementById('btn-del').addEventListener('click', function(){
-    if(delBtn.dataset === undefined) return;
+  // ---------- 数据格下拉弹出列表 ----------
+  var popup = document.getElementById('cell-popup');
+  var popupFor = null;
+  function closePopup(){
+    popup.classList.remove('open');
+    if(popupFor) popupFor.parentElement.classList.remove('popup-open');
+    popupFor = null;
+  }
+  function openPopup(selectEl){
+    closePopup();                          // 先关闭已打开的弹窗（一次只显示一个）
+    popupFor = selectEl;
+    selectEl.parentElement.classList.add('popup-open');
+    popup.innerHTML = '';
+    Array.from(selectEl.options).forEach(function(o){
+      var item = document.createElement('div');
+      item.className = 'popup-item' + (o.selected ? ' active' : '');
+      item.dataset.value = o.value;
+      item.textContent = o.textContent;
+      popup.appendChild(item);
+    });
+    var rect = selectEl.parentElement.getBoundingClientRect();
+    popup.style.minWidth = Math.max(rect.width, 140) + 'px';
+    popup.style.left = rect.left + 'px';
+    popup.style.top = (rect.bottom + 4) + 'px';
+    popup.style.visibility = 'hidden';
+    popup.classList.add('open');
+    var h = popup.offsetHeight;
+    if(rect.bottom + h > window.innerHeight) popup.style.top = (rect.top - h - 4) + 'px';
+    popup.style.visibility = 'visible';
+  }
+  popup.addEventListener('click', function(e){
+    var item = e.target.closest('.popup-item'); if(!item) return;
+    if(!popupFor) return;
+    popupFor.value = item.dataset.value;
+    var sp = popupFor.parentElement.querySelector('.cell-text');
+    if(sp) sp.textContent = item.dataset.value;   // 空显示为空白
+    closePopup();
+    compute();
+    saveCurrent();
+  });
+  document.addEventListener('mousedown', function(e){
+    if(!popup.classList.contains('open')) return;
+    if(popup.contains(e.target)) return;
+    var cell = e.target.closest ? e.target.closest('td.data-cell') : null;
+    if(cell) return;
+    closePopup();
+  });
+  window.addEventListener('scroll', function(e){
+    if(popup.contains(e.target)) return;     // 弹层内部滚动不关闭
+    closePopup();
+  }, true);
+  window.addEventListener('resize', closePopup);
+  document.addEventListener('keydown', function(e){ if(e.key === 'Escape') closePopup(); });
+  document.querySelectorAll('td.data-cell').forEach(function(td){
+    td.addEventListener('click', function(){
+      var sel = td.querySelector('select.cell-select');
+      if(sel) openPopup(sel);
+    });
   });
   var delBtn = document.getElementById('btn-del');
   delBtn.addEventListener('click', function(){
@@ -448,9 +458,32 @@
     refreshSchemeBar();
     saveStore();
   });
-  document.getElementById('btn-reset-part').addEventListener('click', function(){ resetCells(7); });
-  document.getElementById('btn-reset-all').addEventListener('click', function(){ resetCells(9); });
+  function bindConfirm(btn, confirmingText, action){
+    btn.dataset.orig = btn.textContent;
+    btn.addEventListener('click', function(){
+      if(btn.dataset.confirming !== '1'){
+        btn.dataset.confirming = '1';
+        btn.textContent = confirmingText;
+        return;
+      }
+      btn.dataset.confirming = '';
+      btn.textContent = btn.dataset.orig;
+      action();
+    });
+  }
+  bindConfirm(document.getElementById('btn-reset-part'), '确认重置部分？', function(){ resetCells(7); });
+  bindConfirm(document.getElementById('btn-reset-all'), '确认重置全部？', function(){ resetCells(9); });
   if(noteEl) noteEl.addEventListener('input', saveCurrent);
+  document.querySelector('.main-table').addEventListener('input', function(e){
+    if(e.target && e.target.tagName === 'SELECT'){
+      var sp = e.target.parentElement.querySelector('.cell-text');
+      if(sp) sp.textContent = e.target.value;        // 空显示为空白
+    }
+    syncRename(e.target);
+    rebuildOptions();
+    compute();
+    saveCurrent();
+  });
   // ---------- 初始化 ----------
   var store = loadStore();
   if(store && store.schemes && store.schemes.length){
